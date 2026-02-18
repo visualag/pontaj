@@ -62,7 +62,8 @@ export default function GHLSyncButton() {
         }
     };
 
-    if (!user?.isOwner) return null;
+    // Allow Owner OR Admin to sync.
+    if (!user?.isOwner && user?.role !== 'admin') return null;
 
     return (
         <>

@@ -114,120 +114,140 @@ export default function TeamCalendar() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
             <div className="max-w-[95%] mx-auto space-y-6">
-                <header className="flex items-center justify-between bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
-                            <ArrowLeft className="w-5 h-5 text-zinc-500" />
-                        </button>
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                         <div>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                                 Calendar Echipa
-                            </h1>
-                            <p className="text-sm text-zinc-500">Vizualizare de ansamblu</p>
+                                <span className="px-4 font-mono text-sm font-medium">
+                                    {format(currentWeekStart, 'd MMM', { locale: ro })} - {format(daysOfWeek[6], 'd MMM', { locale: ro })}
+                                </span>
+                                <div className="flex items-center gap-4">
+                                    {/* Sync Button straight in the calendar view for Owners AND Admins */}
+                                    {(user?.isOwner || user?.role === 'admin') && <GHLSyncButton />}
+
+                                    <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+                                        <button
+                                            onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
+                                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
+                                        >
+                                            &lt;
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
+                                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
+                                        >
+                                            &gt;
+                                        </button>
+                                    </div>
+                                </div>
+                            </h2>
                         </div>
                     </div>
+                    <header className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
+                                className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
+                            >
+                                &lt;
+                            </button>
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                                Calendar Echipa
+                                <span className="px-4 font-mono text-sm font-medium">
+                                    {format(currentWeekStart, 'd MMM', { locale: ro })} - {format(daysOfWeek[6], 'd MMM', { locale: ro })}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
+                                    className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
+                                >
+                                    &gt;
+                                </button>
+                        </div>
+                    </header>
 
-                    <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-                        <button
-                            onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
-                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
-                        >
-                            &lt;
-                        </button>
-                        <span className="px-4 font-mono text-sm font-medium">
-                            {format(currentWeekStart, 'd MMM', { locale: ro })} - {format(daysOfWeek[6], 'd MMM', { locale: ro })}
-                        </span>
-                        <button
-                            onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
-                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
-                        >
-                            &gt;
-                        </button>
-                    </div>
-                </header>
-
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                                <th className="p-4 text-left font-medium text-zinc-500 min-w-[200px] sticky left-0 bg-white dark:bg-zinc-900 z-10">Membru Echipa</th>
-                                {daysOfWeek.map(day => (
-                                    <th key={day.toString()} className={`p-4 font-medium text-center min-w-[140px] ${isSameDay(day, new Date()) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                        <button
-                                            onClick={() => setSelectedDate(day)}
-                                            className="group flex flex-col items-center justify-center w-full hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg p-2 transition-colors"
-                                            title="Vezi grafic suprapunere"
-                                        >
-                                            <div className="text-xs uppercase text-zinc-400 group-hover:text-indigo-600 transition-colors">{format(day, 'EEE', { locale: ro })}</div>
-                                            <div className="text-lg text-zinc-800 dark:text-zinc-200 group-hover:scale-110 transition-transform">{format(day, 'd')}</div>
-                                            <MousePointerClick className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
-                                        </button>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                            {users.length === 0 && (
-                                <tr>
-                                    <td colSpan={8} className="p-8 text-center text-zinc-400">
-                                        Nu exista utilizatori inregistrati.
-                                    </td>
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                                    <th className="p-4 text-left font-medium text-zinc-500 min-w-[200px] sticky left-0 bg-white dark:bg-zinc-900 z-10">Membru Echipa</th>
+                                    {daysOfWeek.map(day => (
+                                        <th key={day.toString()} className={`p-4 font-medium text-center min-w-[140px] ${isSameDay(day, new Date()) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                            <button
+                                                onClick={() => setSelectedDate(day)}
+                                                className="group flex flex-col items-center justify-center w-full hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg p-2 transition-colors"
+                                                title="Vezi grafic suprapunere"
+                                            >
+                                                <div className="text-xs uppercase text-zinc-400 group-hover:text-indigo-600 transition-colors">{format(day, 'EEE', { locale: ro })}</div>
+                                                <div className="text-lg text-zinc-800 dark:text-zinc-200 group-hover:scale-110 transition-transform">{format(day, 'd')}</div>
+                                                <MousePointerClick className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                                            </button>
+                                        </th>
+                                    ))}
                                 </tr>
-                            )}
-                            {users.map(user => (
-                                <tr key={user.userId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                                    <td className="p-4 sticky left-0 bg-white dark:bg-zinc-900 z-10">
-                                        <div className="font-semibold text-zinc-900 dark:text-zinc-100">
-                                            {user.userName}
-                                        </div>
-                                    </td>
-                                    {daysOfWeek.map(day => {
-                                        const dateStr = format(day, 'yyyy-MM-dd');
-                                        const sched = scheduleMap[user.userId]?.[dateStr];
-                                        const isToday = isSameDay(day, new Date());
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                {users.length === 0 && (
+                                    <tr>
+                                        <td colSpan={8} className="p-8 text-center text-zinc-400">
+                                            Nu exista utilizatori inregistrati.
+                                        </td>
+                                    </tr>
+                                )}
+                                {users.map(user => (
+                                    <tr key={user.userId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                                        <td className="p-4 sticky left-0 bg-white dark:bg-zinc-900 z-10">
+                                            <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                                                {user.userName}
+                                            </div>
+                                        </td>
+                                        {daysOfWeek.map(day => {
+                                            const dateStr = format(day, 'yyyy-MM-dd');
+                                            const sched = scheduleMap[user.userId]?.[dateStr];
+                                            const isToday = isSameDay(day, new Date());
 
-                                        return (
-                                            <td key={dateStr} className={`p-2 text-center align-top h-20 ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''}`}>
-                                                {sched ? (
-                                                    sched.isOffDay ? (
-                                                        <div className="w-full h-full min-h-[48px] rounded-lg bg-red-100/50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 flex items-center justify-center">
-                                                            <span className="text-red-600 dark:text-red-400 text-xs font-medium">Liber</span>
-                                                        </div>
+                                            return (
+                                                <td key={dateStr} className={`p-2 text-center align-top h-20 ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''}`}>
+                                                    {sched ? (
+                                                        sched.isOffDay ? (
+                                                            <div className="w-full h-full min-h-[48px] rounded-lg bg-red-100/50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 flex items-center justify-center">
+                                                                <span className="text-red-600 dark:text-red-400 text-xs font-medium">Liber</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-full min-h-[48px] rounded-lg bg-emerald-100/50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50 p-2 flex flex-col justify-center items-center shadow-sm relative overflow-hidden group">
+                                                                {/* Visual Progress Bar look */}
+                                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-l-lg"></div>
+
+                                                                <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{sched.startTime}</span>
+                                                                <span className="text-xs text-emerald-600 dark:text-emerald-400">{sched.endTime}</span>
+                                                            </div>
+                                                        )
                                                     ) : (
-                                                        <div className="w-full h-full min-h-[48px] rounded-lg bg-emerald-100/50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50 p-2 flex flex-col justify-center items-center shadow-sm relative overflow-hidden group">
-                                                            {/* Visual Progress Bar look */}
-                                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-l-lg"></div>
-
-                                                            <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{sched.startTime}</span>
-                                                            <span className="text-xs text-emerald-600 dark:text-emerald-400">{sched.endTime}</span>
+                                                        <div className="w-full h-full min-h-[48px] rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center opacity-50">
+                                                            <span className="text-zinc-300 text-xs">-</span>
                                                         </div>
-                                                    )
-                                                ) : (
-                                                    <div className="w-full h-full min-h-[48px] rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center opacity-50">
-                                                        <span className="text-zinc-300 text-xs">-</span>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {selectedDate && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <DailyGanttModal // Using the same component but I will rename/refactor it in a moment.
-                        isOpen={true} // Always "open" if rendered
-                        onClose={() => setSelectedDate(null)}
-                        date={selectedDate}
-                        schedules={getSchedulesForDate(selectedDate)}
-                        isInline={true} // Adding a prop to handle inline styling
-                    />
-                </div>
-            )}
-        </div>
-    );
+                {selectedDate && (
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <DailyGanttModal // Using the same component but I will rename/refactor it in a moment.
+                            isOpen={true} // Always "open" if rendered
+                            onClose={() => setSelectedDate(null)}
+                            date={selectedDate}
+                            schedules={getSchedulesForDate(selectedDate)}
+                            isInline={true} // Adding a prop to handle inline styling
+                        />
+                    </div>
+                )}
+            </div>
+            );
 }
