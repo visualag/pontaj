@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw, Key, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
