@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { Play, Square, History, Clock } from 'lucide-react';
+import { Play, Square, History, Clock, AlertTriangle } from 'lucide-react';
+import ScheduleCalendar from './ScheduleCalendar';
 
 interface TimeLog {
     _id: string;
@@ -12,6 +13,7 @@ interface TimeLog {
     description?: string;
     dateString: string;
     isActive: boolean;
+    autoStopped?: boolean;
 }
 
 export default function UserDashboard() {
@@ -176,7 +178,12 @@ export default function UserDashboard() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="font-mono font-medium text-blue-600 dark:text-blue-400">
+                                    <div className="font-mono font-medium text-blue-600 dark:text-blue-400 flex items-center justify-end gap-2">
+                                        {log.autoStopped && (
+                                            <div title="Sesiune oprita automat la miezul noptii">
+                                                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                            </div>
+                                        )}
                                         {log.duration} min
                                     </div>
                                     {log.description && (
@@ -188,6 +195,11 @@ export default function UserDashboard() {
                             </div>
                         ))}
                     </div>
+                </div>
+
+                {/* Schedule Section */}
+                <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 md:col-span-2">
+                    <ScheduleCalendar userId={user.userId} userName={user.userName || ''} />
                 </div>
             </div>
         </div>

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import TimeLog from '@/models/TimeLog';
+import { checkAutoStop } from '@/lib/autoStop';
 
 export async function GET(req: NextRequest) {
     try {
         await dbConnect();
+
+        // Trigger lazy auto-stop check
+        await checkAutoStop();
+
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get('userId');
         const role = searchParams.get('role');

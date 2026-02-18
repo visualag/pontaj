@@ -10,6 +10,8 @@ export interface ITimeLog extends Document {
     description?: string;
     dateString: string;
     isActive: boolean;
+    autoStopped?: boolean;
+    warningMessage?: string;
 }
 
 const TimeLogSchema: Schema = new Schema({
@@ -22,6 +24,8 @@ const TimeLogSchema: Schema = new Schema({
     description: { type: String },
     dateString: { type: String, required: true, index: true }, // Format YYYY-MM-DD
     isActive: { type: Boolean, default: true },
+    autoStopped: { type: Boolean, default: false },
+    warningMessage: { type: String },
 }, {
     timestamps: true,
 });
