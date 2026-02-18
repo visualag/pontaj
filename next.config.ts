@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://*.gohighlevel.com https://*.leadconnectorhq.com;",
+            value: "frame-ancestors 'self' https://*.gohighlevel.com https://*.leadconnectorhq.com https://*.msgsndr.com https://app.gohighlevel.com https://app.leadconnectorhq.com;",
           },
         ],
       },
