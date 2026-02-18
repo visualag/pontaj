@@ -73,10 +73,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
     }, [searchParams]);
 
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.isOwner === true;
+    const isOwner = user?.isOwner === true;
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin }}>
+        <AuthContext.Provider value={{ user, loading, isAdmin, isOwner }}>
             {children}
         </AuthContext.Provider>
     );
