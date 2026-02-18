@@ -13,9 +13,10 @@ interface Schedule {
     _id?: string;
 }
 
-userId: string;
-userName: string;
-isAdmin ?: boolean;
+interface Props {
+    userId: string;
+    userName: string;
+    isAdmin?: boolean;
 }
 
 export default function ScheduleCalendar({ userId, userName, isAdmin }: Props) {
