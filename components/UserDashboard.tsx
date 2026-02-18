@@ -90,7 +90,8 @@ export default function UserDashboard() {
         }
     };
 
-    if (loading) return <div>Se incarca...</div>;
+    if (loading) return <div className="flex h-screen items-center justify-center">Se incarca...</div>;
+    if (!user) return <div className="flex h-screen items-center justify-center text-red-500">Eroare: Utilizator neidentificat. Asigura-te ca accesezi din GHL.</div>;
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-8">
