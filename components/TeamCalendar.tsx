@@ -17,6 +17,7 @@ interface Schedule {
 }
 
 import { useAuth } from './AuthProvider'; // Ensure this import exists
+import GHLSyncButton from './GHLSyncButton';
 
 // ... imports
 
