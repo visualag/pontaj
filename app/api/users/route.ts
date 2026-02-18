@@ -25,10 +25,18 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         await dbConnect();
-        const users = await User.find().sort({ userName: 1 });
+        const { searchParams } = new URL(request.url);
+        const locationId = searchParams.get('locationId');
+
+        const query: any = {};
+        if (locationId) {
+            query.locationId = locationId;
+        }
+
+        const users = await User.find(query).sort({ userName: 1 });
         return NextResponse.json(users);
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });

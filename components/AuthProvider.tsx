@@ -8,12 +8,15 @@ interface UserData {
     userName: string;
     email: string;
     role: string; // 'user' | 'admin'
+    locationId?: string;
+    isOwner?: boolean;
 }
 
 interface AuthContextType {
     user: UserData | null;
     loading: boolean;
     isAdmin: boolean;
+    isOwner: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,17 +38,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userName = searchParams.get('name') || searchParams.get('userName') || 'Unknown';
         const email = searchParams.get('email') || '';
         const role = searchParams.get('role') || 'user';
+        const locationId = searchParams.get('location_id') || searchParams.get('locationId');
 
         if (userId) {
-            const userData = { userId, userName, email, role };
-            setUser(userData);
+            // Initial optimistic state
+            const initialUserData = { userId, userName, email, role, locationId: locationId || undefined };
+            setUser(initialUserData);
 
-            // Upsert user to database for Team view visibility
+            // Sync with backend to get the TRUE app role (Owner/Admin/User) logic
             fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData)
-            }).catch(err => console.error('Failed to sync user', err));
+                body: JSON.stringify(initialUserData)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.user) {
+                        // Update local state with the authoritative role from DB
+                        setUser(prev => ({ ...prev!, ...data.user }));
+                    }
+                })
+                .catch(err => console.error('Failed to sync user', err));
 
             // Optional: Persist to sessionStorage if you want to survive refreshes without params,
             // but GHL usually keeps simple iframes or opens new tabs with params.

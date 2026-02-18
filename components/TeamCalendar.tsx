@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, MousePointerClick } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import DailyGanttModal from './DailyGanttModal';
 
 interface Schedule {
     userId: string;
@@ -21,6 +22,7 @@ export default function TeamCalendar() {
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [users, setUsers] = useState<{ userId: string, userName: string }[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const daysOfWeek = eachDayOfInterval({
         start: currentWeekStart,
@@ -65,6 +67,23 @@ export default function TeamCalendar() {
         scheduleMap[s.userId][s.dateString] = s;
     });
 
+    const getSchedulesForDate = (date: Date) => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        return users.map(u => {
+            const definedSched = scheduleMap[u.userId]?.[dateStr];
+            // If explicit schedule exists, use it. If not, assume default off or missing?
+            // User requested "setat sau nu". If not set, we can show as missing or standard.
+            // Let's stick to what we have in DB.
+            return {
+                userId: u.userId,
+                userName: u.userName,
+                startTime: definedSched?.startTime || '-',
+                endTime: definedSched?.endTime || '-',
+                isOffDay: definedSched?.isOffDay ?? true // Default to off/unset if not found
+            };
+        });
+    };
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
             <div className="max-w-[95%] mx-auto space-y-6">
@@ -107,8 +126,15 @@ export default function TeamCalendar() {
                                 <th className="p-4 text-left font-medium text-zinc-500 min-w-[200px] sticky left-0 bg-white dark:bg-zinc-900 z-10">Membru Echipa</th>
                                 {daysOfWeek.map(day => (
                                     <th key={day.toString()} className={`p-4 font-medium text-center min-w-[140px] ${isSameDay(day, new Date()) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                        <div className="text-xs uppercase text-zinc-400">{format(day, 'EEE', { locale: ro })}</div>
-                                        <div className="text-lg text-zinc-800 dark:text-zinc-200">{format(day, 'd')}</div>
+                                        <button
+                                            onClick={() => setSelectedDate(day)}
+                                            className="group flex flex-col items-center justify-center w-full hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg p-2 transition-colors"
+                                            title="Vezi grafic suprapunere"
+                                        >
+                                            <div className="text-xs uppercase text-zinc-400 group-hover:text-indigo-600 transition-colors">{format(day, 'EEE', { locale: ro })}</div>
+                                            <div className="text-lg text-zinc-800 dark:text-zinc-200 group-hover:scale-110 transition-transform">{format(day, 'd')}</div>
+                                            <MousePointerClick className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                                        </button>
                                     </th>
                                 ))}
                             </tr>
@@ -163,6 +189,15 @@ export default function TeamCalendar() {
                     </table>
                 </div>
             </div>
+
+            {selectedDate && (
+                <DailyGanttModal
+                    isOpen={!!selectedDate}
+                    onClose={() => setSelectedDate(null)}
+                    date={selectedDate}
+                    schedules={getSchedulesForDate(selectedDate)}
+                />
+            )}
         </div>
     );
 }

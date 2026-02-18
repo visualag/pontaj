@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { Trash2, Edit2, Download, Search } from 'lucide-react';
+import { Trash2, Edit2, Download, Search, Shield } from 'lucide-react';
 import EditLogModal from './EditLogModal';
 import ReportingWidget from './ReportingWidget';
+
+import TeamManagement from './TeamManagement';
 
 interface TimeLog {
     _id: string;
@@ -20,11 +22,12 @@ interface TimeLog {
 }
 
 export default function AdminDashboard() {
-    const { user } = useAuth();
+    const { user, isOwner } = useAuth();
     const [logs, setLogs] = useState<TimeLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingLog, setEditingLog] = useState<TimeLog | null>(null);
+    const [showTeamManagement, setShowTeamManagement] = useState(false);
 
     const fetchLogs = async () => {
         try {
@@ -119,15 +122,32 @@ export default function AdminDashboard() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button
-                        onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {isOwner && (
+                            <button
+                                onClick={() => setShowTeamManagement(!showTeamManagement)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${showTeamManagement ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'}`}
+                            >
+                                <Shield className="w-4 h-4" />
+                                Echipa
+                            </button>
+                        )}
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                            <Download className="w-4 h-4" />
+                            Export CSV
+                        </button>
+                    </div>
                 </div>
             </header>
+
+            {showTeamManagement && (
+                <div className="animate-in fade-in slide-in-from-top-4">
+                    <TeamManagement />
+                </div>
+            )}
 
             <ReportingWidget />
 
