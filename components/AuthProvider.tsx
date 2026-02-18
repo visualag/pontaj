@@ -19,10 +19,10 @@ interface AuthContextType {
     isOwner: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-    user: null,
+user: null,
     loading: true,
-    isAdmin: false,
+        isAdmin: false,
+            isOwner: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
