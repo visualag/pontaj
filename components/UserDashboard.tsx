@@ -104,11 +104,18 @@ export default function UserDashboard() {
                     <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">Pontaj Zilnic</p>
                 </div>
                 <div className="text-right">
-                    <div className="text-3xl font-mono font-medium text-zinc-800 dark:text-zinc-200">
-                        {new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div className="text-zinc-400 text-xs uppercase tracking-wide">
-                        {new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="text-3xl font-mono font-medium text-zinc-800 dark:text-zinc-200">
+                            {new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-zinc-400 text-xs uppercase tracking-wide">
+                                {new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </div>
+                            <a href="/team" className="text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 px-3 py-1 rounded-full transition-colors flex items-center gap-1">
+                                <span>👥</span> Echipa
+                            </a>
+                        </div>
                     </div>
                 </div>
             </header>

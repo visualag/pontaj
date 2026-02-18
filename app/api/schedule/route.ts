@@ -10,11 +10,16 @@ export async function GET(request: Request) {
         const start = searchParams.get('start'); // YYYY-MM-DD
         const end = searchParams.get('end'); // YYYY-MM-DD
 
-        if (!userId) {
+        const mode = searchParams.get('mode');
+
+        if (mode !== 'all' && !userId) {
             return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
         }
 
-        const query: any = { userId };
+        const query: any = {};
+        if (mode !== 'all') {
+            query.userId = userId;
+        }
         if (start && end) {
             query.dateString = { $gte: start, $lte: end };
         }

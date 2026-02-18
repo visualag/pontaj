@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { Trash2, Edit2, Download, Search } from 'lucide-react';
+import EditLogModal from './EditLogModal';
+import ReportingWidget from './ReportingWidget';
 
 interface TimeLog {
     _id: string;
@@ -22,6 +24,7 @@ export default function AdminDashboard() {
     const [logs, setLogs] = useState<TimeLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [editingLog, setEditingLog] = useState<TimeLog | null>(null);
 
     const fetchLogs = async () => {
         try {
@@ -46,6 +49,21 @@ export default function AdminDashboard() {
         try {
             await fetch(`/api/logs/${id}`, { method: 'DELETE' });
             fetchLogs();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleUpdate = async (id: string, data: any) => {
+        try {
+            const res = await fetch(`/api/logs/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                fetchLogs();
+            }
         } catch (e) {
             console.error(e);
         }
@@ -111,6 +129,8 @@ export default function AdminDashboard() {
                 </div>
             </header>
 
+            <ReportingWidget />
+
             <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
@@ -152,7 +172,10 @@ export default function AdminDashboard() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-blue-600 transition-colors">
+                                            <button
+                                                onClick={() => setEditingLog(log as any)}
+                                                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-blue-600 transition-colors"
+                                            >
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button onClick={() => handleDelete(log._id)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-red-600 transition-colors">
@@ -166,6 +189,13 @@ export default function AdminDashboard() {
                     </table>
                 </div>
             </div>
-        </div>
+
+            <EditLogModal
+                isOpen={!!editingLog}
+                onClose={() => setEditingLog(null)}
+                log={editingLog}
+                onSave={handleUpdate}
+            />
+        </div >
     );
 }
