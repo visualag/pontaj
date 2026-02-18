@@ -8,12 +8,24 @@ export default function GHLSyncButton() {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [apiKey, setApiKey] = useState('');
+    const [hasSavedKey, setHasSavedKey] = useState(false);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
 
+    useEffect(() => {
+        if (isOpen && user?.locationId) {
+            // Check if we have a key saved
+            fetch(`/api/users/sync-ghl?locationId=${user.locationId}`)
+                .then(res => res.json())
+                .then(data => setHasSavedKey(data.hasKey))
+                .catch(console.error);
+        }
+    }, [isOpen, user?.locationId]);
+
     const handleSync = async () => {
-        if (!apiKey) return;
+        if (!apiKey && !hasSavedKey) return;
+
         setLoading(true);
         setStatus('idle');
         setMessage('');
@@ -23,8 +35,9 @@ export default function GHLSyncButton() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    apiKey,
-                    locationId: user?.locationId
+                    apiKey, // Can be empty if we have saved key
+                    locationId: user?.locationId,
+                    updatedBy: user?.userName
                 })
             });
 
@@ -32,10 +45,10 @@ export default function GHLSyncButton() {
 
             if (res.ok) {
                 setStatus('success');
-                setMessage(`Sincronizare reușită! ${data.stats.total} utilizatori procesați (${data.stats.added} noi, ${data.stats.updated} actualizați).`);
+                setMessage(`Sincronizare reușită! ${data.stats.total} utilizatori procesați.`);
                 setTimeout(() => {
                     setIsOpen(false);
-                    window.location.reload(); // Reload to show new users
+                    window.location.reload();
                 }, 3000);
             } else {
                 setStatus('error');
@@ -49,7 +62,7 @@ export default function GHLSyncButton() {
         }
     };
 
-    if (!user?.isOwner) return null; // Only Owner should sync? Or Admins too? Let's restrict to Owner for safety.
+    if (!user?.isOwner) return null;
 
     return (
         <>
@@ -75,19 +88,26 @@ export default function GHLSyncButton() {
                         </div>
 
                         <div className="space-y-4">
-                            <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 p-3 rounded-lg text-sm">
-                                Introdu <strong>Location API Key</strong> din GoHighLevel (Settings &gt; Business Info) pentru a importa toți utilizatorii din această locație.
-                            </div>
+                            {hasSavedKey ? (
+                                <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 p-3 rounded-lg text-sm flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span>Exista o cheie salvată pentru această locație. Poți lăsa câmpul gol.</span>
+                                </div>
+                            ) : (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 p-3 rounded-lg text-sm">
+                                    Introdu <strong>Location API Key</strong> o singură dată. Acesta va fi salvat pentru viitoare sincronizări.
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                    API Key
+                                    API Key {hasSavedKey && '(Opțional)'}
                                 </label>
                                 <input
                                     type="text"
                                     value={apiKey}
                                     onChange={(e) => setApiKey(e.target.value)}
-                                    placeholder="ex: eyJhbGciOiJIUz..."
+                                    placeholder={hasSavedKey ? "Cheie existenta..." : "ex: pit-..."}
                                     className="w-full p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm font-mono"
                                 />
                             </div>
@@ -115,7 +135,7 @@ export default function GHLSyncButton() {
                                 </button>
                                 <button
                                     onClick={handleSync}
-                                    disabled={loading || !apiKey}
+                                    disabled={loading || (!apiKey && !hasSavedKey)}
                                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
