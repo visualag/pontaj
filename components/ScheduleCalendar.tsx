@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parse, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, startOfWeek, addDays, subDays, isSameDay, parse, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Save, Loader2, Check } from 'lucide-react';
 
