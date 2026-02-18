@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
+import GHLSyncButton from './GHLSyncButton';
 import { Loader2, Shield, User, X } from 'lucide-react';
 
 interface TeamMember {
@@ -91,10 +92,13 @@ export default function TeamManagement() {
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-indigo-600" />
-                Administrare Echipa
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-indigo-600" />
+                    Administrare Echipa
+                </h2>
+                <GHLSyncButton />
+            </div>
 
             {loading ? (
                 <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>

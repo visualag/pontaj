@@ -191,12 +191,15 @@ export default function TeamCalendar() {
             </div>
 
             {selectedDate && (
-                <DailyGanttModal
-                    isOpen={!!selectedDate}
-                    onClose={() => setSelectedDate(null)}
-                    date={selectedDate}
-                    schedules={getSchedulesForDate(selectedDate)}
-                />
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <DailyGanttModal // Using the same component but I will rename/refactor it in a moment.
+                        isOpen={true} // Always "open" if rendered
+                        onClose={() => setSelectedDate(null)}
+                        date={selectedDate}
+                        schedules={getSchedulesForDate(selectedDate)}
+                        isInline={true} // Adding a prop to handle inline styling
+                    />
+                </div>
             )}
         </div>
     );
