@@ -131,7 +131,13 @@ export default function TeamCalendar() {
 
                         <div className="flex items-center gap-4">
                             {/* Sync Button straight in the calendar view for Owners AND Admins */}
-                            {(user?.isOwner || user?.role === 'admin') && <GHLSyncButton />}
+                            {(user?.isOwner || user?.role === 'admin') ? (
+                                <GHLSyncButton />
+                            ) : (
+                                <span className="text-[10px] text-zinc-400 bg-zinc-100 p-1 rounded border">
+                                    Role: {user?.role || 'none'} | Owner: {user?.isOwner ? 'Yes' : 'No'}
+                                </span>
+                            )}
 
                             <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
                                 <button
