@@ -116,45 +116,30 @@ export default function TeamCalendar() {
             <div className="max-w-[95%] mx-auto space-y-6">
                 <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                        <div>
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                                Calendar Echipa
-                                <span className="px-4 font-mono text-sm font-medium">
-                                    {format(currentWeekStart, 'd MMM', { locale: ro })} - {format(daysOfWeek[6], 'd MMM', { locale: ro })}
-                                </span>
-                                <div className="flex items-center gap-4">
-                                    {/* Sync Button straight in the calendar view for Owners AND Admins */}
-                                    {(user?.isOwner || user?.role === 'admin') && <GHLSyncButton />}
-
-                                    <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-                                        <button
-                                            onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
-                                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
-                                        >
-                                            &lt;
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
-                                            className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
-                                        >
-                                            &gt;
-                                        </button>
-                                    </div>
-                                </div>
-                            </h2>
-                        </div>
-                    </div>
-                    <header className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
-                                className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
-                            >
-                                &lt;
+                            <button onClick={() => router.back()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+                                <ArrowLeft className="w-5 h-5 text-zinc-500" />
                             </button>
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                                Calendar Echipa
-                                <span className="px-4 font-mono text-sm font-medium">
+                            <div>
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                                    Calendar Echipa
+                                </h2>
+                                <p className="text-sm text-zinc-500">Vizualizare de ansamblu</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            {/* Sync Button straight in the calendar view for Owners AND Admins */}
+                            {(user?.isOwner || user?.role === 'admin') && <GHLSyncButton />}
+
+                            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+                                <button
+                                    onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
+                                    className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all shadow-sm"
+                                >
+                                    &lt;
+                                </button>
+                                <span className="px-4 font-mono text-sm font-medium flex items-center">
                                     {format(currentWeekStart, 'd MMM', { locale: ro })} - {format(daysOfWeek[6], 'd MMM', { locale: ro })}
                                 </span>
                                 <button
@@ -163,10 +148,11 @@ export default function TeamCalendar() {
                                 >
                                     &gt;
                                 </button>
+                            </div>
                         </div>
-                    </header>
+                    </div>
 
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-x-auto">
+                    <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-zinc-100 dark:border-zinc-800">
