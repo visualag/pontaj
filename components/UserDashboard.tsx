@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { Play, Square, History, Clock, AlertTriangle } from 'lucide-react';
 import ScheduleCalendar from './ScheduleCalendar';
+import RichTextEditor from './RichTextEditor';
+import DOMPurify from 'dompurify';
 
 interface TimeLog {
     _id: string;
@@ -147,12 +149,10 @@ export default function UserDashboard() {
                         </button>
                     ) : (
                         <div className="w-full space-y-3">
-                            <input
-                                type="text"
-                                placeholder="Ce ai lucrat? (Optional)"
-                                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            <RichTextEditor
                                 value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                onChange={setDescription}
+                                placeholder="Ce ai lucrat? (Optional)"
                             />
                             <button
                                 onClick={handleCheckOut}
@@ -195,9 +195,11 @@ export default function UserDashboard() {
                                         {log.duration} min
                                     </div>
                                     {log.description && (
-                                        <div className="text-xs text-zinc-400 max-w-[120px] truncate" title={log.description}>
-                                            {log.description}
-                                        </div>
+                                        <div
+                                            className="text-xs text-zinc-400 max-w-[200px] truncate prose prose-invert prose-xs"
+                                            title={log.description.replace(/<[^>]*>?/gm, '')} // Strip tags for tooltip
+                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(log.description) }}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -207,7 +209,7 @@ export default function UserDashboard() {
 
                 {/* Schedule Section */}
                 <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 md:col-span-2">
-                    <ScheduleCalendar userId={user.userId} userName={user.userName || ''} />
+                    <ScheduleCalendar userId={user.userId} userName={user.userName || ''} isAdmin={user.role === 'admin'} />
                 </div>
             </div>
         </div>
