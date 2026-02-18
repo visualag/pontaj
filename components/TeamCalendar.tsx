@@ -235,5 +235,6 @@ export default function TeamCalendar() {
                     </div>
                 )}
             </div>
-            );
+        </div>
+    );
 }
