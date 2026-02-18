@@ -39,6 +39,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (userId) {
             const userData = { userId, userName, email, role };
             setUser(userData);
+
+            // Upsert user to database for Team view visibility
+            fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            }).catch(err => console.error('Failed to sync user', err));
+
             // Optional: Persist to sessionStorage if you want to survive refreshes without params,
             // but GHL usually keeps simple iframes or opens new tabs with params.
             // sessionStorage.setItem('ghl_user', JSON.stringify(userData));

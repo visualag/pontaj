@@ -13,12 +13,12 @@ interface Schedule {
     _id?: string;
 }
 
-interface Props {
-    userId: string;
-    userName: string;
+userId: string;
+userName: string;
+isAdmin ?: boolean;
 }
 
-export default function ScheduleCalendar({ userId, userName }: Props) {
+export default function ScheduleCalendar({ userId, userName, isAdmin }: Props) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [loading, setLoading] = useState(true);
@@ -53,9 +53,16 @@ export default function ScheduleCalendar({ userId, userName }: Props) {
     };
 
     const handleDateClick = (date: Date) => {
+        // Prevent editing past dates unless admin
+        if (!isAdmin && date < new Date() && !isSameDay(date, new Date())) {
+            alert('Nu poti modifica programul din trecut.');
+            return;
+        }
+
         setSelectedDate(date);
         const dateStr = format(date, 'yyyy-MM-dd');
         const existing = schedules.find(s => s.dateString === dateStr);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
         if (existing) {
             setStartTime(existing.startTime);
@@ -64,7 +71,7 @@ export default function ScheduleCalendar({ userId, userName }: Props) {
         } else {
             setStartTime('09:00');
             setEndTime('17:00');
-            setIsOffDay(false);
+            setIsOffDay(isWeekend); // Default off for weekends
         }
     };
 
@@ -79,6 +86,7 @@ export default function ScheduleCalendar({ userId, userName }: Props) {
                 body: JSON.stringify({
                     userId,
                     userName,
+                    role: isAdmin ? 'admin' : 'user',
                     dateString,
                     startTime,
                     endTime,
@@ -147,15 +155,16 @@ export default function ScheduleCalendar({ userId, userName }: Props) {
                 h-14 rounded-lg flex flex-col items-center justify-center text-xs border transition-all
                 ${isSelected ? 'border-primary ring-2 ring-primary/20 z-10' : 'border-transparent'}
                 ${isToday ? 'bg-zinc-50 dark:bg-zinc-800 font-bold' : ''}
-                ${sched?.isOffDay ? 'bg-red-50 text-red-400' : ''}
-                ${!sched && !isToday && !isSelected ? 'hover:bg-zinc-50' : ''}
+                ${sched?.isOffDay || (!sched && (date.getDay() === 0 || date.getDay() === 6)) ? 'bg-red-50 text-red-400 dark:bg-red-900/10' : ''}
+                ${!sched && !isToday && !isSelected ? 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50' : ''}
+                ${!isAdmin && date < new Date() && !isToday ? 'opacity-50 cursor-not-allowed' : ''}
               `}
                         >
                             <span className="mb-1">{format(date, 'd')}</span>
                             {sched && !sched.isOffDay && (
                                 <span className="text-[10px] text-zinc-500">{sched.startTime}</span>
                             )}
-                            {sched?.isOffDay && (
+                            {(sched?.isOffDay || (!sched && (date.getDay() === 0 || date.getDay() === 6))) && (
                                 <span className="text-[10px] text-red-400">Liber</span>
                             )}
                         </button>
