@@ -1,14 +1,47 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
+import LocationSettings from '@/models/LocationSettings';
+
+export async function GET(request: Request) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(request.url);
+        const locationId = searchParams.get('locationId');
+
+        if (!locationId) return NextResponse.json({ hasKey: false });
+
+        const settings = await LocationSettings.findOne({ locationId });
+        return NextResponse.json({ hasKey: !!settings?.apiKey });
+    } catch (error) {
+        return NextResponse.json({ hasKey: false });
+    }
+}
 
 export async function POST(request: Request) {
     try {
         await dbConnect();
-        const { apiKey, locationId } = await request.json();
+        let { apiKey, locationId } = await request.json();
 
-        if (!apiKey || !locationId) {
-            return NextResponse.json({ error: 'Missing API Key or Location ID' }, { status: 400 });
+        if (!locationId) {
+            return NextResponse.json({ error: 'Missing Location ID' }, { status: 400 });
+        }
+
+        // 1. If API Key provided, save/update it.
+        if (apiKey) {
+            await LocationSettings.findOneAndUpdate(
+                { locationId },
+                { apiKey: apiKey, updatedAt: new Date() },
+                { upsert: true, new: true }
+            );
+        } else {
+            // 2. If no API Key, try to load from DB
+            const settings = await LocationSettings.findOne({ locationId });
+            if (settings?.apiKey) {
+                apiKey = settings.apiKey;
+            } else {
+                return NextResponse.json({ error: 'Missing API Key (None provided or saved)' }, { status: 400 });
+            }
         }
 
         // Try GHL V1 API first (Standard Location API Key)
@@ -25,6 +58,10 @@ export async function POST(request: Request) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('GHL API Error:', response.status, errorText);
+
+            // If 401, maybe key is invalid -> could remove it?
+            // if (response.status === 401) ...
+
             return NextResponse.json({
                 error: `GHL API failed: ${response.statusText}`,
                 details: errorText
@@ -52,16 +89,6 @@ export async function POST(request: Request) {
             const userName = ghlUser.name || `${ghlUser.firstName} ${ghlUser.lastName}`;
             const email = ghlUser.email;
 
-            // Determine role. GHL roles might be "admin" or "user".
-            // We only want to set 'admin' if they are an admin in GHL, 
-            // BUT we must be careful not to demote the Owner if they exist.
-            // Safe bet: Default to 'user', let them be promoted manually in app, 
-            // UNLESS they are new.
-            // Actually, let's trust GHL role if provided? 
-            // GHL user object has 'roles' object or 'type'. 
-            // Simplify: Just sync identity. Leave role management to the app mostly, 
-            // unless it's a new user.
-
             // Check if user exists
             const existingUser = await User.findOne({ userId });
 
@@ -71,7 +98,7 @@ export async function POST(request: Request) {
                     userId,
                     userName,
                     email,
-                    locationId,
+                    locationId, // Forces correct locationId
                     role: ghlUser.type === 'agency' || ghlUser.roles?.admin ? 'admin' : 'user', // Basic init
                     isOwner: false, // Never auto-assign owner via sync
                     lastSeen: new Date() // Mark as seen so they show up
@@ -94,3 +121,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
     }
 }
+
