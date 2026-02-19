@@ -110,7 +110,7 @@ export default function TeamManagement() {
                                 <th className="p-3 font-medium">Nume</th>
                                 <th className="p-3 font-medium">Email</th>
                                 <th className="p-3 font-medium text-center">Rol Actual</th>
-                                {isOwner && <th className="p-3 font-medium text-right">Actiuni</th>}
+                                {isAdmin && <th className="p-3 font-medium text-right">Actiuni</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -130,7 +130,7 @@ export default function TeamManagement() {
                                             {member.isOwner ? 'OWNER' : member.role.toUpperCase()}
                                         </span>
                                     </td>
-                                    {isOwner && (
+                                    {isAdmin && (
                                         <td className="p-3 text-right">
                                             {!member.isOwner && (
                                                 <div className="flex justify-end gap-2">
@@ -153,9 +153,9 @@ export default function TeamManagement() {
                                                     <button
                                                         onClick={() => handleTransferOwnership(member.userId)}
                                                         className="px-3 py-1 border border-zinc-200 hover:bg-zinc-50 rounded text-xs text-zinc-600"
-                                                        title="Transfera drepturile de Owner"
+                                                        title="Seteaza ca Singurul Administrator (Owner)"
                                                     >
-                                                        Transfera Owner
+                                                        Seteaza Owner
                                                     </button>
                                                 </div>
                                             )}
