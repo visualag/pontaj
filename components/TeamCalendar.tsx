@@ -34,7 +34,11 @@ export default function TeamCalendar() {
     });
 
     useEffect(() => {
-        if (user?.locationId) fetchData();
+        if (user?.locationId) {
+            fetchData();
+        } else {
+            setLoading(false); // Stop spinner immediately if no locationId
+        }
     }, [currentWeekStart, user?.locationId]);
 
     const fetchData = async () => {
@@ -142,8 +146,8 @@ export default function TeamCalendar() {
                                                 <button
                                                     onClick={() => setSelectedDate(day)}
                                                     className={`flex flex-col items-center justify-center w-full rounded-xl p-2 transition-all ${isSelected
-                                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                                                            : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                                                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
                                                         }`}
                                                     title="Selectează ziua pentru a vedea bara de ore"
                                                 >
