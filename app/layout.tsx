@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   description: "Internal time tracking for GHL Agency",
 };
 
+// Force all pages to be server-rendered (not static).
+// This is required so that the middleware always runs on every request,
+// guaranteeing that CSP frame-ancestors headers are fresh and never served
+// from Vercel's Edge CDN cache (which would bypass the middleware).
+export const dynamic = 'force-dynamic';
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
