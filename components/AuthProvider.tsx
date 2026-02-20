@@ -7,16 +7,19 @@ interface UserData {
     userId: string;
     userName: string;
     email: string;
-    role: string; // 'user' | 'admin'
+    role: string; // 'user' | 'admin' — from DB (authoritative)
     locationId?: string;
     isOwner?: boolean;
+    // The role GHL claims in URL — used only for first-boot UI decisions, NOT for security
+    urlRole?: string;
 }
 
 interface AuthContextType {
     user: UserData | null;
     loading: boolean;
-    isAdmin: boolean;
-    isOwner: boolean;
+    isAdmin: boolean;       // authoritative: from DB
+    isOwner: boolean;       // authoritative: from DB
+    urlClaimsAdmin: boolean; // optimistic: from GHL URL params (for first-run UI only)
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     isAdmin: false,
     isOwner: false,
+    urlClaimsAdmin: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -34,50 +38,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Try to get from URL first
         const userId = searchParams.get('user_id') || searchParams.get('userId');
         const userName = searchParams.get('name') || searchParams.get('userName') || 'Unknown';
         const email = searchParams.get('email') || '';
-        const role = searchParams.get('role') || 'user';
         const locationId = searchParams.get('location_id') || searchParams.get('locationId');
 
-        if (userId) {
-            // Initial optimistic state
-            const initialUserData = { userId, userName, email, role, locationId: locationId || undefined };
-            setUser(initialUserData);
+        // Capture GHL's claimed role — multiple possible param names
+        const urlRole =
+            searchParams.get('role') ||
+            searchParams.get('user_type') ||
+            searchParams.get('type') ||
+            'user';
 
-            // Sync with backend to get the TRUE app role (Owner/Admin/User) logic
+        if (userId) {
+            // Set optimistic state immediately so UI renders fast
+            setUser({ userId, userName, email, role: 'user', locationId: locationId || undefined, urlRole });
+
+            // Sync with DB to get TRUE authoritative role
             fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(initialUserData)
+                body: JSON.stringify({ userId, userName, email, locationId })
+                // NOTE: We intentionally never send 'role' here — DB is authoritative
             })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.user) {
-                        // Update local state with the authoritative role from DB
-                        setUser(prev => ({ ...prev!, ...data.user }));
+                        // Merge DB role into state, keep urlRole for first-run UI
+                        setUser(prev => ({
+                            ...prev!,
+                            ...data.user,
+                            urlRole // preserve the URL-claimed role for first-run detection
+                        }));
                     }
                 })
-                .catch(err => console.error('Failed to sync user', err));
-
-            // Optional: Persist to sessionStorage if you want to survive refreshes without params,
-            // but GHL usually keeps simple iframes or opens new tabs with params.
-            // sessionStorage.setItem('ghl_user', JSON.stringify(userData));
+                .catch(err => console.error('Failed to sync user', err))
+                .finally(() => setLoading(false));
         } else {
-            // Check storage? Or just fail?
-            // For now, if no params, we might be in a direct visit or reload.
-            // const stored = sessionStorage.getItem('ghl_user');
-            // if (stored) setUser(JSON.parse(stored));
+            setLoading(false);
         }
-        setLoading(false);
     }, [searchParams]);
 
+    // DB-authoritative checks
     const isAdmin = user?.role === 'admin' || user?.isOwner === true;
     const isOwner = user?.isOwner === true;
 
+    // GHL URL claims admin — used ONLY for showing first-run setup UI
+    // Never use this for access control decisions
+    const urlClaimsAdmin =
+        user?.urlRole === 'admin' ||
+        user?.urlRole === 'agency' ||
+        user?.urlRole === 'Agency';
+
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin, isOwner }}>
+        <AuthContext.Provider value={{ user, loading, isAdmin, isOwner, urlClaimsAdmin }}>
             {children}
         </AuthContext.Provider>
     );

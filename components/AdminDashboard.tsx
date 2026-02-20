@@ -5,8 +5,9 @@ import { useAuth } from './AuthProvider';
 import { Trash2, Edit2, Download, Search, Shield } from 'lucide-react';
 import EditLogModal from './EditLogModal';
 import ReportingWidget from './ReportingWidget';
-
 import TeamManagement from './TeamManagement';
+import FirstRunSetup from './FirstRunSetup';
+import GHLSyncButton from './GHLSyncButton';
 
 interface TimeLog {
     _id: string;
@@ -109,6 +110,9 @@ export default function AdminDashboard() {
 
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-8">
+            {/* First-run setup: visible to admins inside GHL iframe */}
+            <FirstRunSetup />
+
             <header className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Admin Dashboard</h1>
                 <div className="flex gap-4">
@@ -123,6 +127,7 @@ export default function AdminDashboard() {
                         />
                     </div>
                     <div className="flex items-center gap-2">
+                        <GHLSyncButton />
                         {isOwner && (
                             <button
                                 onClick={() => setShowTeamManagement(!showTeamManagement)}

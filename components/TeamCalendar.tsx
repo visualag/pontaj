@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, MousePointerClick } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, MousePointerClick, RefreshCw, Key } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DailyGanttModal from './DailyGanttModal';
 
@@ -176,8 +176,23 @@ export default function TeamCalendar() {
                             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                                 {users.length === 0 && (
                                     <tr>
-                                        <td colSpan={8} className="p-8 text-center text-zinc-400">
-                                            Nu exista utilizatori inregistrati.
+                                        <td colSpan={8} className="px-6 py-12 text-center">
+                                            <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                                                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                                    <RefreshCw className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                                </div>
+                                                <p className="font-semibold text-zinc-700 dark:text-zinc-300">Niciun utilizator sincronizat</p>
+                                                <p className="text-sm text-zinc-400">Importați echipa din GoHighLevel pentru a vedea programul.</p>
+                                                <a
+                                                    href="/setup"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-1 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                                >
+                                                    <Key className="w-4 h-4" />
+                                                    Configurare API Keys
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
