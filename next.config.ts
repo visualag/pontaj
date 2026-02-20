@@ -7,18 +7,15 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           {
-            // Allow GHL to embed this app in iframes from all their domains.
-            // *.gohighlevel.com — main GHL app
-            // *.leadconnectorhq.com — LeadConnector (GHL white-label base)
-            // *.msgsndr.com — older GHL white-label domains
+            // Allow embedding from ANY origin.
+            // This app is an internal GHL tool — could run on any white-label domain.
+            // Security comes from URL auth params (user_id), not CSP framing.
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://*.gohighlevel.com https://*.leadconnectorhq.com https://*.msgsndr.com https://gohighlevel.com https://leadconnectorhq.com",
+            value: "frame-ancestors *",
           },
           {
-            // X-Frame-Options must be REMOVED entirely when using CSP frame-ancestors.
-            // Setting it to any value (even ALLOWALL) can override CSP in some browsers.
-            // Vercel doesn't let you delete a header, so we set it to an empty string
-            // which effectively makes browsers ignore it.
+            // Set to empty string to neutralize — browsers ignore empty X-Frame-Options.
+            // This ensures only CSP frame-ancestors controls iframe permissions.
             key: 'X-Frame-Options',
             value: '',
           },
