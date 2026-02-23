@@ -8,6 +8,7 @@ interface SetupState {
     checked: boolean;
     hasKey: boolean;
     hasAgencyKey: boolean;
+    hasCompanyId: boolean;
 }
 
 export default function FirstRunSetup() {
@@ -19,7 +20,7 @@ export default function FirstRunSetup() {
     const [locationApiKey, setLocationApiKey] = useState('');
     const [agencyApiKey, setAgencyApiKey] = useState('');
 
-    const [setup, setSetup] = useState<SetupState>({ checked: false, hasKey: false, hasAgencyKey: false });
+    const [setup, setSetup] = useState<SetupState>({ checked: false, hasKey: false, hasAgencyKey: false, hasCompanyId: false });
     const [isExpanded, setIsExpanded] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -32,17 +33,23 @@ export default function FirstRunSetup() {
     useEffect(() => {
         if (!effectiveLocationId) {
             // No location ID yet — auto-expand so user can enter it
-            setSetup({ checked: true, hasKey: false, hasAgencyKey: false });
+            setSetup({ checked: true, hasKey: false, hasAgencyKey: false, hasCompanyId: false });
             setIsExpanded(true);
             return;
         }
         fetch(`/api/users/sync-ghl?locationId=${effectiveLocationId}`)
             .then(r => r.json())
             .then(data => {
-                setSetup({ checked: true, hasKey: data.hasKey, hasAgencyKey: data.hasAgencyKey });
+                setSetup({
+                    checked: true,
+                    hasKey: data.hasKey,
+                    hasAgencyKey: data.hasAgencyKey,
+                    hasCompanyId: data.hasCompanyId
+                });
+                if (data.companyId) setCompanyId(data.companyId);
                 if (!data.hasKey && !data.hasAgencyKey) setIsExpanded(true);
             })
-            .catch(() => setSetup({ checked: true, hasKey: false, hasAgencyKey: false }));
+            .catch(() => setSetup({ checked: true, hasKey: false, hasAgencyKey: false, hasCompanyId: false }));
     }, [effectiveLocationId]);
 
     const handleSync = async () => {
@@ -86,7 +93,8 @@ export default function FirstRunSetup() {
                 setSetup(prev => ({
                     ...prev,
                     hasKey: !!locationApiKey || prev.hasKey,
-                    hasAgencyKey: !!agencyApiKey || prev.hasAgencyKey
+                    hasAgencyKey: !!agencyApiKey || prev.hasAgencyKey,
+                    hasCompanyId: !!companyId || prev.hasCompanyId
                 }));
                 setLocationApiKey('');
                 setAgencyApiKey('');
@@ -138,7 +146,7 @@ export default function FirstRunSetup() {
                                 ? 'Introduceți Location ID-ul sub-account-ului sau Company ID-ul agenției.'
                                 : isMissingKeys
                                     ? 'Nicio cheie API salvată. Adăugați cheia pentru a importa utilizatorii.'
-                                    : `Chei salvate: ${[setup.hasKey && 'Location', setup.hasAgencyKey && 'Agency'].filter(Boolean).join(' + ')}`
+                                    : `Chei salvate: ${[setup.hasKey && 'Location', setup.hasAgencyKey && 'Agency', setup.hasCompanyId && 'Agency ID'].filter(Boolean).join(' + ')}`
                             }
                         </p>
                     </div>
