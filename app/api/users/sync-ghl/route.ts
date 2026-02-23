@@ -147,6 +147,13 @@ export async function POST(request: Request) {
                     const ghlRole = (ghlUser.role || ghlUser.type || '').toLowerCase();
                     const rolesType = (ghlUser.roles?.type || '').toLowerCase();
 
+                    // When syncing from Agency API, SKIP sub-account users (rolesType === 'account')
+                    // We only want actual agency staff members
+                    if (source === 'agency' && rolesType === 'account') {
+                        pushLog(`Skipping sub-account user: ${userName} (roles.type=account)`);
+                        continue;
+                    }
+
                     if (
                         source === 'agency' ||
                         ['admin', 'agency', 'owner'].includes(ghlRole) ||
