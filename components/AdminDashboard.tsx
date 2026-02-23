@@ -319,7 +319,7 @@ export default function AdminDashboard() {
                         </button>
                     )}
 
-                    <ReportingWidget logs={logs} />
+                    <ReportingWidget />
 
                     {/* Activity Feed */}
                     <div className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
                     isOpen={!!editingLog}
                     onClose={() => setEditingLog(null)}
                     log={editingLog}
-                    onUpdate={(data: any) => handleUpdate(editingLog._id, data)}
+                    onSave={(id: string, data: any) => handleUpdate(id, data)}
                 />
             )}
         </div>
