@@ -26,18 +26,23 @@ export default function FirstRunSetup() {
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
     // Effective location ID: from URL, or manually entered, or from localStorage
-    const effectiveLocationId = user?.locationId
+    const rawLocationId = user?.locationId
         || manualLocationId.trim()
         || (typeof window !== 'undefined' ? localStorage.getItem('pontaj_location_id') || '' : '');
 
+    const isPlaceholderId = ['location', '{location.id}', '{{location.id}}'].includes(rawLocationId.toLowerCase());
+    const effectiveLocationId = isPlaceholderId ? '' : rawLocationId;
+
+    const currentCompanyId = companyId.trim() || user?.companyId || '';
+
     useEffect(() => {
-        if (!effectiveLocationId) {
-            // No location ID yet — auto-expand so user can enter it
+        if (!effectiveLocationId && !currentCompanyId) {
+            // No IDs yet — auto-expand so user can enter them
             setSetup({ checked: true, hasKey: false, hasAgencyKey: false, hasCompanyId: false });
             setIsExpanded(true);
             return;
         }
-        fetch(`/api/users/sync-ghl?locationId=${effectiveLocationId}`)
+        fetch(`/api/users/sync-ghl?locationId=${effectiveLocationId}&companyId=${currentCompanyId}`)
             .then(r => r.json())
             .then(data => {
                 setSetup({
@@ -54,7 +59,9 @@ export default function FirstRunSetup() {
 
     const handleSync = async () => {
         const locId = effectiveLocationId;
-        if (!locId) {
+        const compId = currentCompanyId;
+
+        if (!locId && !compId) {
             setResult({ success: false, message: 'Introduceți un Location ID sau Company ID mai întâi.' });
             return;
         }
@@ -73,8 +80,8 @@ export default function FirstRunSetup() {
                 body: JSON.stringify({
                     apiKey: locationApiKey,
                     agencyApiKey,
-                    locationId: locId,
-                    companyId: companyId.trim() || undefined,
+                    locationId: locId || undefined,
+                    companyId: compId || undefined,
                     updatedBy: user?.userName
                 })
             });
@@ -119,7 +126,7 @@ export default function FirstRunSetup() {
     // NOTE: Removed auto-hide when keys exist — setup panel is ALWAYS accessible.
 
     const isMissingKeys = !setup.hasKey && !setup.hasAgencyKey;
-    const isMissingLocationId = !effectiveLocationId;
+    const isMissingId = !effectiveLocationId && !currentCompanyId;
 
     return (
         <div className={`rounded-2xl border overflow-hidden transition-all ${isMissingKeys
@@ -137,16 +144,18 @@ export default function FirstRunSetup() {
                     </div>
                     <div>
                         <p className={`font-semibold text-sm ${isMissingKeys ? 'text-amber-900 dark:text-amber-200' : 'text-indigo-900 dark:text-indigo-200'}`}>
-                            {isMissingLocationId ? '⚠️ Location ID lipsă — Configurare necesară'
+                            {isMissingId ? '⚠️ Configurează Location/Agency ID'
                                 : isMissingKeys ? '⚠️ Configurare necesară — Sincronizare GHL'
                                     : 'Gestionare Chei API GHL'}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                            {isMissingLocationId
+                            {isMissingId
                                 ? 'Introduceți Location ID-ul sub-account-ului sau Company ID-ul agenției.'
-                                : isMissingKeys
-                                    ? 'Nicio cheie API salvată. Adăugați cheia pentru a importa utilizatorii.'
-                                    : `Chei salvate: ${[setup.hasKey && 'Location', setup.hasAgencyKey && 'Agency', setup.hasCompanyId && 'Agency ID'].filter(Boolean).join(' + ')}`
+                                : isPlaceholderId
+                                    ? 'Mod Agenție detectat (Placeholder GHL). Folosiți Company ID pentru sync global.'
+                                    : isMissingKeys
+                                        ? 'Nicio cheie API salvată. Adăugați cheia pentru a importa utilizatorii.'
+                                        : `Chei salvate: ${[setup.hasKey && 'Location', setup.hasAgencyKey && 'Agency', setup.hasCompanyId && 'Agency ID'].filter(Boolean).join(' + ')}`
                             }
                         </p>
                     </div>
