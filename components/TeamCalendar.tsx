@@ -136,23 +136,16 @@ export default function TeamCalendar() {
         const dateStr = format(date, 'yyyy-MM-dd');
         return users.map(u => {
             const definedSched = scheduleMap[u.userId]?.[dateStr];
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            let isOffDay = isWeekend;
-            let startTime = '09:00';
-            let endTime = '17:00';
-
-            if (definedSched) {
-                isOffDay = definedSched.isOffDay;
-                startTime = definedSched.startTime;
-                endTime = definedSched.endTime;
-            }
+            const hasSchedule = !!definedSched;
+            const isOffDay = definedSched ? definedSched.isOffDay : false;
 
             return {
                 userId: u.userId,
                 userName: u.userName,
-                startTime: isOffDay ? '-' : startTime,
-                endTime: isOffDay ? '-' : endTime,
-                isOffDay
+                startTime: hasSchedule && !isOffDay ? definedSched!.startTime : '-',
+                endTime: hasSchedule && !isOffDay ? definedSched!.endTime : '-',
+                isOffDay,
+                hasSchedule
             };
         });
     };

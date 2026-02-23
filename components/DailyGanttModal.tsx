@@ -10,6 +10,7 @@ interface Schedule {
     startTime: string; // "HH:mm"
     endTime: string;   // "HH:mm"
     isOffDay: boolean;
+    hasSchedule?: boolean;
 }
 
 interface Props {
@@ -51,14 +52,14 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
         };
     };
 
-    // Sort schedules: Working first, then Off. Then alphabetical.
+    // Sort: working first, then unscheduled (grey), then off-day (red)
     const sortedSchedules = [...schedules].sort((a, b) => {
-        if (a.isOffDay && !b.isOffDay) return 1;
-        if (!a.isOffDay && b.isOffDay) return -1;
-        if (!a.isOffDay && !b.isOffDay) {
-            if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
-        }
-        return a.userName.localeCompare(b.userName);
+        const rank = (s: Schedule) => {
+            if (s.hasSchedule && !s.isOffDay) return 0;  // working
+            if (!s.hasSchedule) return 1;                // no schedule
+            return 2;                                     // off day
+        };
+        return rank(a) - rank(b) || a.userName.localeCompare(b.userName);
     });
 
     const Content = (
@@ -121,7 +122,9 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                                         ))}
                                     </div>
 
-                                    {!sched.isOffDay ? (
+                                    {/* 3 states: working, off day, no schedule */}
+                                    {sched.hasSchedule && !sched.isOffDay ? (
+                                        // Working — indigo gradient bar
                                         <div
                                             className="absolute top-2 bottom-2 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow-lg shadow-indigo-500/20 group-hover/row:scale-y-110 transition-all cursor-help flex items-center justify-center overflow-hidden"
                                             style={getBarStyles(sched.startTime, sched.endTime)}
@@ -129,12 +132,18 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                                         >
                                             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/row:opacity-100 transition-opacity" />
                                             <span className="text-[10px] text-white font-black tracking-tighter hidden sm:block">
-                                                {sched.startTime} - {sched.endTime}
+                                                {sched.startTime} &ndash; {sched.endTime}
                                             </span>
                                         </div>
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                                    ) : sched.isOffDay ? (
+                                        // Off day — red tint
+                                        <div className="absolute inset-1 rounded-xl bg-rose-100 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center justify-center">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Zi Liberă</span>
+                                        </div>
+                                    ) : (
+                                        // No schedule — grey
+                                        <div className="absolute inset-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center opacity-60">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Nesetat</span>
                                         </div>
                                     )}
                                 </div>

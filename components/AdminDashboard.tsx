@@ -87,16 +87,17 @@ export default function AdminDashboard() {
             const schedMap: Record<string, any> = {};
             schedules.forEach((s: any) => { schedMap[s.userId] = s; });
 
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
             const result = users.map((u: any) => {
                 const sched = schedMap[u.userId];
-                const isOffDay = sched ? sched.isOffDay : isWeekend;
+                const hasSchedule = !!sched;
+                const isOffDay = sched ? sched.isOffDay : false;
                 return {
                     userId: u.userId,
                     userName: u.userName,
-                    startTime: isOffDay ? '-' : (sched?.startTime || '09:00'),
-                    endTime: isOffDay ? '-' : (sched?.endTime || '17:00'),
-                    isOffDay
+                    startTime: hasSchedule && !isOffDay ? sched.startTime : '-',
+                    endTime: hasSchedule && !isOffDay ? sched.endTime : '-',
+                    isOffDay,
+                    hasSchedule
                 };
             });
             setGanttSchedules(result);
