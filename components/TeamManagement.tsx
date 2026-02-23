@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import GHLSyncButton from './GHLSyncButton';
-import { Loader2, Shield, User, X } from 'lucide-react';
+import { Loader2, Shield, User, X, Trash2 } from 'lucide-react';
 
 interface TeamMember {
     userId: string;
@@ -97,7 +97,34 @@ export default function TeamManagement() {
                     <Shield className="w-5 h-5 text-indigo-600" />
                     Administrare Echipa
                 </h2>
-                <GHLSyncButton />
+                <div className="flex gap-2">
+                    {isAdmin && (
+                        <button
+                            onClick={async () => {
+                                if (!confirm('Ești sigur că vrei să ștergi TOȚI utilizatorii de tip placeholder (ex: {{user.name}})?')) return;
+                                try {
+                                    const res = await fetch('/api/users/cleanup', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ locationId: user?.locationId })
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        alert(`Am șters ${data.deletedCount} utilizatori invalizi.`);
+                                        fetchMembers();
+                                    }
+                                } catch (e) {
+                                    console.error(e);
+                                }
+                            }}
+                            className="flex items-center gap-2 px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all border border-red-100 dark:border-red-800"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Curăță Invalizi
+                        </button>
+                    )}
+                    <GHLSyncButton onSyncComplete={fetchMembers} />
+                </div>
             </div>
 
             {loading ? (

@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, Key, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
-export default function GHLSyncButton() {
+interface GHLSyncButtonProps {
+    onSyncComplete?: () => void;
+}
+
+export default function GHLSyncButton({ onSyncComplete }: GHLSyncButtonProps) {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [apiKey, setApiKey] = useState('');
@@ -52,10 +56,14 @@ export default function GHLSyncButton() {
             if (res.ok) {
                 setStatus('success');
                 setMessage(`Sincronizare reușită! ${data.stats.total} utilizatori procesați.`);
+
+                // Call callback if provided
+                if (onSyncComplete) onSyncComplete();
+
                 setTimeout(() => {
                     setIsOpen(false);
-                    window.location.reload();
-                }, 3000);
+                    // window.location.reload(); // Removed to avoid hard refresh if we have a callback
+                }, 2000);
             } else {
                 setStatus('error');
                 setMessage(data.error || 'A apărut o eroare.');

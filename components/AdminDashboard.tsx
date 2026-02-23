@@ -36,7 +36,7 @@ interface TimeLog {
 }
 
 export default function AdminDashboard() {
-    const { user, isOwner } = useAuth();
+    const { user, isAdmin, isOwner, urlClaimsAdmin } = useAuth();
     const [logs, setLogs] = useState<TimeLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -160,6 +160,26 @@ export default function AdminDashboard() {
         (log.userName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (log.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
+
+    if (!isAdmin && urlClaimsAdmin) {
+        return (
+            <div className="max-w-4xl mx-auto p-10 space-y-8 text-center bg-white dark:bg-zinc-900 rounded-3xl mt-10 shadow-xl border border-zinc-100 dark:border-zinc-800">
+                <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center mb-4">
+                    <Shield className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h1 className="text-3xl font-bold">Configurare Admin</h1>
+                <p className="text-zinc-500 max-w-md mx-auto">
+                    Salut, {user?.userName}! Pentru a activa funcțiile de administrator, trebuie să sincronizezi echipa GHL folosind cheile API de mai jos.
+                </p>
+                <div className="text-left bg-zinc-50 dark:bg-black/50 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                    <FirstRunSetup />
+                </div>
+                <p className="text-xs text-zinc-400">
+                    După sincronizare, datele tale vor fi salvate și vei avea acces la dashboard-ul complet.
+                </p>
+            </div>
+        );
+    }
 
     if (loading && logs.length === 0) return (
         <div className="min-h-screen flex items-center justify-center">
