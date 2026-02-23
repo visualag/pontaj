@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Clock } from 'lucide-react';
+import { X, Clock, User as UserIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -12,14 +12,12 @@ interface Schedule {
     isOffDay: boolean;
 }
 
-// ... imports
-
 interface Props {
-    isOpen: boolean; // Kept for backward compat if needed, but mainly we use isInline
+    isOpen: boolean;
     onClose: () => void;
     date: Date;
     schedules: Schedule[];
-    isInline?: boolean; // New prop
+    isInline?: boolean;
 }
 
 export default function DailyGanttView({ isOpen, onClose, date, schedules, isInline = false }: Props) {
@@ -42,7 +40,7 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
         const viewStart = Math.max(startDec, START_HOUR);
         const viewEnd = Math.min(endDec, END_HOUR);
 
-        if (viewEnd <= viewStart) return { left: '0%', width: '0%' }; // Out of bounds
+        if (viewEnd <= viewStart) return { left: '0%', width: '0%', opacity: 0 };
 
         const leftPercent = ((viewStart - START_HOUR) / TOTAL_HOURS) * 100;
         const widthPercent = ((viewEnd - viewStart) / TOTAL_HOURS) * 100;
@@ -53,90 +51,96 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
         };
     };
 
-    // Sort schedules: Working first, then Off
+    // Sort schedules: Working first, then Off. Then alphabetical.
     const sortedSchedules = [...schedules].sort((a, b) => {
         if (a.isOffDay && !b.isOffDay) return 1;
         if (!a.isOffDay && b.isOffDay) return -1;
-        return a.startTime.localeCompare(b.startTime);
+        if (!a.isOffDay && !b.isOffDay) {
+            if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
+        }
+        return a.userName.localeCompare(b.userName);
     });
 
     const Content = (
-        <div className={`flex flex-col h-full ${isInline ? '' : 'bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] border border-zinc-100 dark:border-zinc-800'}`}>
-            <header className="flex justify-between items-center p-6 border-b border-zinc-100 dark:border-zinc-800">
+        <div className={`flex flex-col h-full bg-white dark:bg-zinc-900 ${isInline ? '' : 'rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[90vh] border border-zinc-100 dark:border-zinc-800'} overflow-hidden`}>
+            <header className="flex justify-between items-center px-10 py-8 border-b border-zinc-50 dark:border-zinc-800">
                 <div>
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-indigo-600" />
-                        Program Detaliat
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-3 uppercase italic tracking-tighter">
+                        <Clock className="w-7 h-7 text-indigo-500" />
+                        Analiză Suprapuneri
                     </h2>
-                    <p className="text-zinc-500 text-sm">
+                    <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-1">
                         {format(date, 'EEEE, d MMMM yyyy', { locale: ro })}
                     </p>
                 </div>
                 {!isInline && (
-                    <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 rounded-2xl transition-all">
                         <X className="w-5 h-5 text-zinc-400" />
-                    </button>
-                )}
-                {isInline && (
-                    <button onClick={onClose} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 group">
-                        <span className="text-xs font-bold uppercase tracking-wider">Inchide</span>
-                        <X className="w-4 h-4" />
                     </button>
                 )}
             </header>
 
-            <div className={`flex-1 overflow-y-auto p-6 space-y-6 ${isInline ? 'max-h-[600px]' : ''}`}>
-                {/* Time Ruler */}
-                <div className="flex border-b border-zinc-200 dark:border-zinc-700 pb-2 ml-[150px]">
-                    {Array.from({ length: TOTAL_HOURS + 1 }).map((_, i) => (
-                        <div key={i} className="flex-1 text-xs text-zinc-400 text-center border-l border-zinc-100 dark:border-zinc-800 h-2 relative">
-                            <span className="absolute -top-4 -left-2">{i + START_HOUR}:00</span>
-                        </div>
-                    ))}
-                </div>
+            <div className={`flex-1 overflow-x-auto p-8 ${isInline ? '' : 'overflow-y-auto'}`}>
+                <div className="min-w-[800px] flex flex-col gap-6">
+                    {/* Time Ruler */}
+                    <div className="flex ml-[180px] border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                        {Array.from({ length: TOTAL_HOURS + 1 }).map((_, i) => (
+                            <div key={i} className="flex-1 border-l border-zinc-50 dark:border-zinc-800 h-4 relative">
+                                <span className="absolute -top-7 left-0 -translate-x-1/2 text-[9px] font-black text-zinc-400 font-mono tracking-tighter">
+                                    {(i + START_HOUR).toString().padStart(2, '0')}:00
+                                </span>
+                            </div>
+                        ))}
+                    </div>
 
-                {/* Users Rows */}
-                <div className="space-y-4">
-                    {sortedSchedules.map((sched, idx) => (
-                        <div key={idx} className="flex items-center group">
-                            {/* User Info */}
-                            <div className="w-[150px] pr-4 shrink-0">
-                                <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate" title={sched.userName}>
-                                    {sched.userName}
+                    {/* Users Rows */}
+                    <div className="space-y-4">
+                        {sortedSchedules.map((sched, idx) => (
+                            <div key={idx} className="flex items-center group/row">
+                                {/* User Info */}
+                                <div className="w-[180px] pr-6 shrink-0 flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center border border-zinc-100 dark:border-zinc-700 group-hover/row:border-indigo-200 transition-all">
+                                        <UserIcon className="w-4 h-4 text-zinc-400 group-hover/row:text-indigo-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="font-black text-xs text-zinc-900 dark:text-zinc-100 truncate tracking-tight" title={sched.userName}>
+                                            {sched.userName}
+                                        </div>
+                                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
+                                            {sched.isOffDay ? 'Inactiv' : 'Activ'}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-xs text-zinc-400">
-                                    {sched.isOffDay ? 'Liber' : `${sched.startTime} - ${sched.endTime}`}
+
+                                {/* Gantt Bar Area */}
+                                <div className="flex-1 h-12 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner group-hover/row:shadow-md transition-all">
+                                    {/* Grid Lines */}
+                                    <div className="absolute inset-0 flex pointer-events-none opacity-20">
+                                        {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
+                                            <div key={i} className="flex-1 border-r border-zinc-200 dark:border-zinc-800"></div>
+                                        ))}
+                                    </div>
+
+                                    {!sched.isOffDay ? (
+                                        <div
+                                            className="absolute top-2 bottom-2 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow-lg shadow-indigo-500/20 group-hover/row:scale-y-110 transition-all cursor-help flex items-center justify-center overflow-hidden"
+                                            style={getBarStyles(sched.startTime, sched.endTime)}
+                                            title={`${sched.userName}: ${sched.startTime} - ${sched.endTime}`}
+                                        >
+                                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/row:opacity-100 transition-opacity" />
+                                            <span className="text-[10px] text-white font-black tracking-tighter hidden sm:block">
+                                                {sched.startTime} - {sched.endTime}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Zi Liberă</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Gantt Bar Area */}
-                            <div className="flex-1 h-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg relative overflow-hidden border border-zinc-100 dark:border-zinc-800">
-                                {/* Grid Lines */}
-                                <div className="absolute inset-0 flex pointer-events-none">
-                                    {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
-                                        <div key={i} className="flex-1 border-r border-zinc-100 dark:border-zinc-800 opacity-50"></div>
-                                    ))}
-                                </div>
-
-                                {!sched.isOffDay ? (
-                                    <div
-                                        className="absolute top-1 bottom-1 bg-indigo-500/90 rounded-md shadow-sm group-hover:bg-indigo-500 transition-colors cursor-help"
-                                        style={getBarStyles(sched.startTime, sched.endTime)}
-                                        title={`${sched.userName}: ${sched.startTime} - ${sched.endTime}`}
-                                    >
-                                        {/* Label inside bar if wide enough */}
-                                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {sched.startTime} - {sched.endTime}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-xs text-zinc-300 italic">Liber</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
@@ -147,7 +151,7 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
             {Content}
         </div>
     );

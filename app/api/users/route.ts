@@ -75,10 +75,11 @@ export async function GET(request: Request) {
         const locationId = searchParams.get('locationId');
 
         const query: any = {};
-        const isPlaceholder = !locationId || ['location', '{location.id}', '{{location.id}}'].includes(String(locationId).toLowerCase());
+        const isPlaceholder = !locationId ||
+            ['location', '{location.id}', '{{location.id}}', '{{ location.id }}', 'undefined', 'null', 'none', ''].includes(String(locationId).toLowerCase().trim());
 
         if (locationId && !isPlaceholder) {
-            query.locationId = locationId;
+            query.locationId = locationId.trim();
         }
 
         const users = await User.find(query).sort({ userName: 1 });
