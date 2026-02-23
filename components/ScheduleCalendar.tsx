@@ -59,7 +59,7 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
         const today = startOfDay(new Date());
         const targetDate = startOfDay(date);
 
-        if (!isAdmin && targetDate < today) {
+        if (targetDate < today) {
             alert('Nu poți modifica programul pentru zilele trecute.');
             return;
         }

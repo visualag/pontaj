@@ -25,7 +25,6 @@ export default function TeamCalendar() {
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [users, setUsers] = useState<{ userId: string, userName: string }[]>([]);
     const [loading, setLoading] = useState(true);
-    // Default to today so Gantt is always visible
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     // Quick Edit state
@@ -40,16 +39,8 @@ export default function TeamCalendar() {
         end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
     });
 
-    useEffect(() => {
-        // Fetch if we have any ID or if we are an admin (can see all)
-        if (user?.userId) {
-            fetchData();
-        } else {
-            setLoading(false);
-        }
-    }, [currentWeekStart, user?.userId, user?.locationId]);
-
     const fetchData = async () => {
+        if (!user?.userId) return;
         setLoading(true);
         try {
             const start = format(daysOfWeek[0], 'yyyy-MM-dd');
@@ -71,6 +62,10 @@ export default function TeamCalendar() {
     };
 
     useEffect(() => {
+        fetchData();
+    }, [currentWeekStart, user?.userId, user?.locationId]);
+
+    useEffect(() => {
         if (selectedDate && user?.userId) {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const mySched = schedules.find(s => s.userId === user.userId && s.dateString === dateStr);
@@ -89,6 +84,15 @@ export default function TeamCalendar() {
 
     const handleQuickSave = async () => {
         if (!user?.userId || !selectedDate) return;
+
+        // Block past-date editing for EVERYONE
+        const today = startOfDay(new Date());
+        const targetDate = startOfDay(selectedDate);
+        if (targetDate < today) {
+            alert('Nu poți modifica programul pentru zilele trecute.');
+            return;
+        }
+
         setSaving(true);
         try {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -113,7 +117,7 @@ export default function TeamCalendar() {
                     const filtered = prev.filter(s => !(s.userId === user.userId && s.dateString === dateStr));
                     return [...filtered, updated];
                 });
-                setIsEditingMe(true);
+                setIsEditingMe(false);
             }
         } catch (e) {
             console.error(e);
@@ -121,6 +125,7 @@ export default function TeamCalendar() {
             setSaving(false);
         }
     };
+
     const scheduleMap: Record<string, Record<string, Schedule>> = {};
     schedules.forEach(s => {
         if (!scheduleMap[s.userId]) scheduleMap[s.userId] = {};
@@ -153,71 +158,74 @@ export default function TeamCalendar() {
     };
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
-            <div className="max-w-[95%] mx-auto space-y-6">
+        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 flex flex-col gap-8">
+            <div className="max-w-[95%] mx-auto w-full space-y-8 pb-20">
 
                 {/* ── Header ── */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => router.back()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+                <header className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 shadow-sm border border-zinc-100 dark:border-zinc-800 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-all duration-1000" />
+
+                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+                        <div className="flex items-center gap-6">
+                            <button onClick={() => router.push('/')} className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 rounded-2xl transition-all border border-zinc-200 dark:border-zinc-700">
                                 <ArrowLeft className="w-5 h-5 text-zinc-500" />
                             </button>
                             <div>
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                                <h1 className="text-3xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent italic tracking-tight uppercase">
                                     Calendar Echipă
-                                </h2>
-                                <p className="text-sm text-zinc-500">Vizualizare săptămânală + suprapunere</p>
+                                </h1>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mt-1">Gestiune Program & Suprapuneri</p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            {(user?.isOwner || user?.role === 'admin') && <GHLSyncButton />}
-                            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+                        <div className="flex flex-wrap items-center justify-center gap-4">
+                            <GHLSyncButton onSyncComplete={fetchData} />
+                            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-inner">
                                 <button
                                     onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))}
-                                    className="px-3 py-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all text-sm font-medium"
+                                    className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl transition-all text-sm font-black shadow-sm"
                                 >‹</button>
-                                <span className="px-4 font-mono text-sm font-medium flex items-center">
+                                <span className="px-6 font-black text-xs uppercase tracking-widest flex items-center text-zinc-600 dark:text-zinc-300">
                                     {format(currentWeekStart, 'd MMM', { locale: ro })} – {format(daysOfWeek[6], 'd MMM', { locale: ro })}
                                 </span>
                                 <button
                                     onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
-                                    className="px-3 py-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-all text-sm font-medium"
+                                    className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-xl transition-all text-sm font-black shadow-sm"
                                 >›</button>
                             </div>
                         </div>
                     </div>
+                </header>
 
-                    {/* ── Weekly Table ── */}
+                {/* ── Weekly Table ── */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full border-collapse">
                             <thead>
-                                <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                                    <th className="p-4 text-left font-medium text-zinc-500 min-w-[180px] sticky left-0 bg-white dark:bg-zinc-900 z-10">
+                                <tr className="bg-zinc-50/50 dark:bg-zinc-800/20 text-left border-b border-zinc-100 dark:border-zinc-800 italic">
+                                    <th className="p-7 font-black uppercase tracking-widest text-[10px] text-zinc-400 min-w-[220px] sticky left-0 bg-zinc-50/50 dark:bg-zinc-800/20 z-10 border-r border-zinc-100 dark:border-zinc-800">
                                         Membru Echipă
                                     </th>
                                     {daysOfWeek.map(day => {
                                         const isSelected = isSameDay(day, selectedDate);
                                         const isToday = isSameDay(day, new Date());
                                         return (
-                                            <th key={day.toString()} className={`p-2 font-medium text-center min-w-[120px] ${isToday ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                            <th key={day.toString()} className={`p-4 font-black text-center min-w-[140px] ${isToday ? 'bg-indigo-500/5 dark:bg-indigo-500/10' : ''}`}>
                                                 <button
                                                     onClick={() => setSelectedDate(day)}
-                                                    className={`flex flex-col items-center justify-center w-full rounded-xl p-2 transition-all ${isSelected
-                                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                                                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                                    className={`flex flex-col items-center justify-center w-full rounded-2xl p-4 transition-all ${isSelected
+                                                        ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/30 transform scale-105 z-10'
+                                                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 bg-white/50 dark:bg-zinc-900/50'
                                                         }`}
-                                                    title="Selectează ziua pentru a vedea bara de ore"
                                                 >
-                                                    <div className={`text-xs uppercase ${isSelected ? 'text-indigo-200' : 'text-zinc-400'}`}>
+                                                    <div className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-indigo-200' : 'text-zinc-400'}`}>
                                                         {format(day, 'EEE', { locale: ro })}
                                                     </div>
-                                                    <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                                                    <div className={`text-xl font-black ${isSelected ? 'text-white' : 'text-zinc-900 dark:text-zinc-100'}`}>
                                                         {format(day, 'd')}
                                                     </div>
                                                     {isToday && !isSelected && (
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-0.5" />
+                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1 shadow-glow" />
                                                     )}
                                                 </button>
                                             </th>
@@ -228,64 +236,70 @@ export default function TeamCalendar() {
                             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                                 {loading && (
                                     <tr>
-                                        <td colSpan={8} className="p-8 text-center text-zinc-400">
-                                            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
-                                            Se încarcă...
+                                        <td colSpan={8} className="p-24 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
+                                                <p className="font-black uppercase tracking-widest text-xs text-zinc-400 italic">Analizăm datele...</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
                                 {!loading && users.length === 0 && (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
-                                                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                                                    <Key className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                        <td colSpan={8} className="p-24 text-center">
+                                            <div className="flex flex-col items-center gap-6 max-w-sm mx-auto opacity-50">
+                                                <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-indigo-200 dark:border-indigo-800">
+                                                    <Key className="w-10 h-10 text-indigo-400" />
                                                 </div>
-                                                <p className="font-semibold text-zinc-700 dark:text-zinc-300">Niciun utilizator sincronizat</p>
-                                                <p className="text-sm text-zinc-400">Reveniți la dashboard și sincronizați echipa GHL.</p>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tighter">Niciun membru sincronizat</h3>
+                                                    <p className="text-xs text-zinc-400 font-bold uppercase tracking-widest mt-1">Sincronizați echipa folosind butonul GHL</p>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
                                 )}
                                 {!loading && users.map(u => (
-                                    <tr key={u.userId} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                                        <td className="p-4 sticky left-0 bg-white dark:bg-zinc-900 z-10">
-                                            <div className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{u.userName}</div>
+                                    <tr key={u.userId} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
+                                        <td className="p-7 sticky left-0 bg-white dark:bg-zinc-900 z-10 border-r border-zinc-100 dark:border-zinc-800 shadow-[5px_0_10px_rgba(0,0,0,0.01)] transition-colors group-hover:bg-zinc-50 dark:group-hover:bg-zinc-800/50">
+                                            <div className="font-black text-zinc-900 dark:text-white text-sm tracking-tight group-hover:translate-x-1 transition-transform">{u.userName}</div>
                                         </td>
                                         {daysOfWeek.map(day => {
                                             const dateStr = format(day, 'yyyy-MM-dd');
                                             const sched = scheduleMap[u.userId]?.[dateStr];
                                             const isToday = isSameDay(day, new Date());
                                             const isSelected = isSameDay(day, selectedDate);
+                                            const isMySchedule = u.userId === user?.userId;
 
                                             return (
                                                 <td
                                                     key={dateStr}
-                                                    className={`p-2 text-center align-top h-16 cursor-pointer ${isToday ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''} ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}
+                                                    className={`p-4 text-center align-middle h-28 transition-all duration-300 ${isToday ? 'bg-indigo-500/[0.03] dark:bg-indigo-500/[0.05]' : ''} ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
                                                     onClick={() => {
                                                         setSelectedDate(day);
-                                                        if (u.userId === user?.userId) {
-                                                            setIsEditingMe(true);
-                                                        }
+                                                        if (isMySchedule) setIsEditingMe(true);
                                                     }}
                                                 >
-                                                    {sched ? (
-                                                        sched.isOffDay ? (
-                                                            <div className="w-full h-full min-h-[40px] rounded-lg bg-red-100/60 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 flex items-center justify-center">
-                                                                <span className="text-red-500 dark:text-red-400 text-xs font-medium">Liber</span>
-                                                            </div>
+                                                    <div className="cursor-pointer">
+                                                        {sched ? (
+                                                            sched.isOffDay ? (
+                                                                <div className="w-full h-full min-h-[60px] rounded-2xl bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                                                    <span className="text-rose-500 font-black uppercase tracking-tighter text-[10px]">Liber</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-full h-full min-h-[60px] rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 p-2.5 flex flex-col justify-center items-center relative overflow-hidden group-hover:scale-105 transition-transform shadow-sm">
+                                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-2xl" />
+                                                                    <span className="text-sm font-black text-emerald-900 dark:text-emerald-100 tracking-tight leading-none mb-1">{sched.startTime}</span>
+                                                                    <div className="w-full h-[1px] bg-emerald-200/50 dark:bg-emerald-800/50 my-1" />
+                                                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 leading-none">{sched.endTime}</span>
+                                                                </div>
+                                                            )
                                                         ) : (
-                                                            <div className="w-full h-full min-h-[40px] rounded-lg bg-emerald-100/60 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50 p-1.5 flex flex-col justify-center items-center relative overflow-hidden">
-                                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-l-lg" />
-                                                                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">{sched.startTime}</span>
-                                                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400">{sched.endTime}</span>
+                                                            <div className="w-full h-full min-h-[60px] rounded-2xl border-2 border-dashed border-zinc-100 dark:border-zinc-800 flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-500">
+                                                                <span className="text-zinc-400 text-[10px] font-black italic tracking-widest uppercase">gol</span>
                                                             </div>
-                                                        )
-                                                    ) : (
-                                                        <div className="w-full h-full min-h-[40px] rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center opacity-40">
-                                                            <span className="text-zinc-300 text-xs">–</span>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
                                                 </td>
                                             );
                                         })}
@@ -296,84 +310,98 @@ export default function TeamCalendar() {
                     </div>
                 </div>
 
-                {/* ── Gantt & Quick Edit — INTEGRATED ── */}
+                {/* ── Gantt & Quick Edit section ── */}
                 {users.length > 0 && (
-                    <div className="grid lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
-                                <div className="flex items-center gap-2">
-                                    <CalendarIcon className="w-5 h-5 text-indigo-500" />
-                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                                        Suprapunere ore — {format(selectedDate, 'EEEE, d MMMM', { locale: ro })}
-                                    </span>
+                    <div className="grid lg:grid-cols-3 gap-10 items-start">
+                        {/* High-visibility Gantt Chart */}
+                        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[3rem] shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden group/gantt">
+                            <header className="px-10 py-7 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-800/40">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-indigo-500/30 group-hover/gantt:rotate-2 transition-transform">
+                                        <CalendarIcon className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tighter italic italic">Vizualizare Suprapuneri</h2>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500/70 mt-0.5">{format(selectedDate, 'EEEE, d MMMM yyyy', { locale: ro })}</p>
+                                    </div>
                                 </div>
-                                <span className="text-[10px] text-zinc-400 font-medium">Click pe o zi în tabel pentru a schimba data</span>
-                            </div>
-                            <div className="p-4">
-                                <DailyGanttModal
-                                    isOpen={true}
-                                    onClose={() => { }}
-                                    date={selectedDate}
-                                    schedules={getSchedulesForDate(selectedDate)}
-                                    isInline={true}
-                                />
+                                <div className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800 italic">
+                                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+                                    Suprapuneri identificate
+                                </div>
+                            </header>
+                            <div className="p-10">
+                                <div className="bg-zinc-50 dark:bg-zinc-950 p-4 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-inner overflow-hidden min-h-[400px]">
+                                    <DailyGanttModal
+                                        isOpen={true}
+                                        onClose={() => { }}
+                                        date={selectedDate}
+                                        schedules={getSchedulesForDate(selectedDate)}
+                                        isInline={true}
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Integrated Edit Form */}
-                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 p-6 flex flex-col">
-                            <h3 className="font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
-                                <Edit2 className="w-4 h-4 text-indigo-500" />
-                                Programul meu detaliat
-                            </h3>
-                            <p className="text-xs text-zinc-400 mb-6">Pentru {format(selectedDate, 'd MMMM', { locale: ro })}</p>
+                        {/* Quick Edit — Personal control */}
+                        <div className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-xl border border-zinc-100 dark:border-zinc-800 p-10 flex flex-col relative overflow-hidden h-full min-h-[500px]">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-                            <div className="space-y-6 flex-1">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pornire</label>
-                                        <input
-                                            type="time"
-                                            value={startTime}
-                                            onChange={(e) => setStartTime(e.target.value)}
-                                            disabled={isOffDay}
-                                            className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all p-3"
-                                        />
+                            <div className="relative z-10 flex flex-col h-full">
+                                <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-2 italic tracking-tight uppercase">
+                                    <Edit2 className="w-6 h-6 text-indigo-500 inline mr-2" />
+                                    Programul Meu
+                                </h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-10 pb-4 border-b border-zinc-50 dark:border-zinc-800 italic">
+                                    Editează ziua de {format(selectedDate, 'd MMMM', { locale: ro })}
+                                </p>
+
+                                <div className="space-y-10 flex-1">
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Check-in</label>
+                                            <input
+                                                type="time"
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                disabled={isOffDay}
+                                                className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-2xl text-xl font-black focus:ring-4 focus:ring-indigo-500/10 transition-all p-6 shadow-sm text-center disabled:opacity-20"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Check-out</label>
+                                            <input
+                                                type="time"
+                                                value={endTime}
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                disabled={isOffDay}
+                                                className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-2xl text-xl font-black focus:ring-4 focus:ring-indigo-500/10 transition-all p-6 shadow-sm text-center disabled:opacity-20"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Oprire</label>
-                                        <input
-                                            type="time"
-                                            value={endTime}
-                                            onChange={(e) => setEndTime(e.target.value)}
-                                            disabled={isOffDay}
-                                            className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all p-3"
-                                        />
-                                    </div>
+
+                                    <button
+                                        onClick={() => setIsOffDay(!isOffDay)}
+                                        className={`w-full p-8 rounded-[2rem] cursor-pointer transition-all border-2 flex items-center justify-between group transform hover:-translate-y-1 ${isOffDay
+                                            ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-900/30 text-rose-600 shadow-rose-200/20 shadow-lg'
+                                            : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-transparent text-zinc-500 hover:border-indigo-100 dark:hover:bg-indigo-900/20'}`}
+                                    >
+                                        <span className="text-xs font-black uppercase tracking-widest italic">Zi Liberă / Concediu</span>
+                                        <div className={`w-14 h-8 rounded-full relative transition-all duration-500 shadow-inner ${isOffDay ? 'bg-rose-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
+                                            <div className={`absolute top-1.5 w-5 h-5 bg-white rounded-full transition-all shadow-md ${isOffDay ? 'left-8' : 'left-1.5'}`} />
+                                        </div>
+                                    </button>
                                 </div>
 
-                                <label className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all border border-transparent hover:border-zinc-200 dark:hover:border-zinc-600">
-                                    <div className={`w-10 h-6 rounded-full relative transition-colors ${isOffDay ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isOffDay}
-                                            onChange={(e) => setIsOffDay(e.target.checked)}
-                                            className="hidden"
-                                        />
-                                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isOffDay ? 'left-5' : 'left-1'}`} />
-                                    </div>
-                                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Zi Liberă / Concediu</span>
-                                </label>
+                                <button
+                                    onClick={handleQuickSave}
+                                    disabled={saving}
+                                    className="w-full bg-indigo-600 hover:bg-black dark:hover:bg-white dark:hover:text-black text-white py-8 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-4 shadow-[0_25px_50px_rgba(79,70,229,0.3)] hover:shadow-xl disabled:opacity-50 transition-all transform hover:-translate-y-2 active:translate-y-0 mt-auto"
+                                >
+                                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-6 h-6" />}
+                                    Salvează Programul
+                                </button>
                             </div>
-
-                            <button
-                                onClick={handleQuickSave}
-                                disabled={saving}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all mt-6"
-                            >
-                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                Salvează Programul
-                            </button>
                         </div>
                     </div>
                 )}
