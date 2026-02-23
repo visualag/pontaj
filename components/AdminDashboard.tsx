@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { Trash2, Edit2, Download, Search, Shield, Settings, Users, Calendar, BarChart3, X, Loader2 } from 'lucide-react';
+import { Trash2, Edit2, Download, Search, Shield, Settings, Calendar, BarChart3, X, Loader2 } from 'lucide-react';
 import EditLogModal from './EditLogModal';
 import ReportingWidget from './ReportingWidget';
 import TeamManagement from './TeamManagement';
@@ -42,7 +42,8 @@ export default function AdminDashboard() {
     const [editingLog, setEditingLog] = useState<TimeLog | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [memberCount, setMemberCount] = useState(0);
-    const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
+    const [ganttDate, setGanttDate] = useState<Date>(new Date());
+    const [ganttSchedules, setGanttSchedules] = useState<Schedule[]>([]);
     const [scheduleLoading, setScheduleLoading] = useState(false);
     const [showGantt, setShowGantt] = useState(true);
 
@@ -52,52 +53,68 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         if (!user?.userId) return;
         setLoading(true);
-        setScheduleLoading(true);
         try {
             const logsRes = await fetch(`/api/logs?role=admin&userId=${user?.userId}`);
             const logsData = await logsRes.json();
-            if (logsData.success) {
-                setLogs(logsData.logs);
-            }
+            if (logsData.success) setLogs(logsData.logs);
 
             const locId = user?.locationId || '';
             const usersRes = await fetch(`/api/users?locationId=${locId}`);
             if (usersRes.ok) {
                 const users = await usersRes.json();
                 setMemberCount(users.length);
-
-                const schedRes = await fetch(`/api/schedule?mode=all&start=${todayStr}&end=${todayStr}&locationId=${locId}`);
-                if (schedRes.ok) {
-                    const schedules = await schedRes.json();
-                    const schedMap: Record<string, any> = {};
-                    schedules.forEach((s: any) => { schedMap[s.userId] = s; });
-
-                    const isWeekend = today.getDay() === 0 || today.getDay() === 6;
-                    const result = users.map((u: any) => {
-                        const sched = schedMap[u.userId];
-                        const isOffDay = sched ? sched.isOffDay : isWeekend;
-                        return {
-                            userId: u.userId,
-                            userName: u.userName,
-                            startTime: isOffDay ? '-' : (sched?.startTime || '09:00'),
-                            endTime: isOffDay ? '-' : (sched?.endTime || '17:00'),
-                            isOffDay
-                        };
-                    });
-                    setTodaySchedules(result);
-                }
             }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchGanttForDate = async (date: Date) => {
+        if (!user?.userId) return;
+        setScheduleLoading(true);
+        try {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const locId = user?.locationId || '';
+            const [usersRes, schedRes] = await Promise.all([
+                fetch(`/api/users?locationId=${locId}`),
+                fetch(`/api/schedule?mode=all&start=${dateStr}&end=${dateStr}&locationId=${locId}`)
+            ]);
+            if (!usersRes.ok || !schedRes.ok) return;
+            const users = await usersRes.json();
+            const schedules = await schedRes.json();
+            const schedMap: Record<string, any> = {};
+            schedules.forEach((s: any) => { schedMap[s.userId] = s; });
+
+            const result = users.map((u: any) => {
+                const sched = schedMap[u.userId];
+                const hasSchedule = !!sched;
+                const isOffDay = sched ? sched.isOffDay : false;
+                return {
+                    userId: u.userId,
+                    userName: u.userName,
+                    startTime: hasSchedule && !isOffDay ? sched.startTime : '-',
+                    endTime: hasSchedule && !isOffDay ? sched.endTime : '-',
+                    isOffDay,
+                    hasSchedule
+                };
+            });
+            setGanttSchedules(result);
+            setMemberCount(users.length);
+        } catch (e) {
+            console.error(e);
+        } finally {
             setScheduleLoading(false);
         }
     };
 
     useEffect(() => {
-        if (user?.userId) fetchData();
-    }, [user?.userId, user?.locationId, todayStr]);
+        if (user?.userId) {
+            fetchData();
+            fetchGanttForDate(today);
+        }
+    }, [user?.userId, user?.locationId]);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Sigur vrei să ștergi acest pontaj?')) return;
@@ -179,7 +196,7 @@ export default function AdminDashboard() {
                             </h1>
                             <div className="flex items-center gap-4 mt-1 font-bold text-sm tracking-tight">
                                 <span className="flex items-center gap-1.5 text-indigo-500">
-                                    <Users className="w-4 h-4" />
+                                    <Shield className="w-4 h-4" />
                                     {memberCount} Membri
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
@@ -201,14 +218,6 @@ export default function AdminDashboard() {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-
-                        <a
-                            href="/team"
-                            className="group flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/40 transform hover:-translate-y-0.5 font-bold"
-                        >
-                            <Users className="w-5 h-5 transition-transform group-hover:scale-110" />
-                            Echipă
-                        </a>
 
                         <button
                             onClick={() => setShowSettings(!showSettings)}
@@ -251,8 +260,9 @@ export default function AdminDashboard() {
             )}
 
             {showSettings && isAdmin && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-6">
                     <FirstRunSetup />
+                    <TeamManagement />
                 </div>
             )}
 
@@ -271,6 +281,10 @@ export default function AdminDashboard() {
                         userName={user?.userName || ''}
                         isAdmin={isAdmin}
                         locationId={user?.locationId || ''}
+                        onDateSelect={(date) => {
+                            setGanttDate(date);
+                            fetchGanttForDate(date);
+                        }}
                     />
                 </div>
 
@@ -286,7 +300,9 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                         <h3 className="font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">Suprapunere Echipă</h3>
-                                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Vizualizare program astăzi</p>
+                                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">
+                                            {format(ganttDate, 'EEEE, d MMMM', { locale: ro })}
+                                        </p>
                                     </div>
                                 </div>
                                 <button onClick={() => setShowGantt(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
@@ -300,8 +316,8 @@ export default function AdminDashboard() {
                                     <DailyGanttModal
                                         isOpen={true}
                                         onClose={() => setShowGantt(false)}
-                                        date={today}
-                                        schedules={todaySchedules}
+                                        date={ganttDate}
+                                        schedules={ganttSchedules}
                                         isInline={true}
                                     />
                                 )}
@@ -311,7 +327,7 @@ export default function AdminDashboard() {
 
                     {!showGantt && (
                         <button
-                            onClick={() => setShowGantt(true)}
+                            onClick={() => { setShowGantt(true); fetchGanttForDate(ganttDate); }}
                             className="group w-full py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] text-zinc-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/20 transition-all font-black uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-4 bg-white dark:bg-zinc-900 shadow-sm"
                         >
                             <Calendar className="w-8 h-8 transition-transform group-hover:scale-110" />
