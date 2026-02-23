@@ -15,7 +15,7 @@ interface TeamMember {
 }
 
 export default function TeamManagement() {
-    const { user, isOwner, isAdmin } = useAuth();
+    const { user, isOwner, isAdmin, urlLocationId } = useAuth();
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -28,10 +28,9 @@ export default function TeamManagement() {
     const fetchMembers = async () => {
         setLoading(true);
         try {
-            // We pass locationId to filter only my team
-            // Note: For Agency admins, we might want to see all? 
-            // For now, stick to location-based team.
-            const locId = user?.locationId || '';
+            // Use URL locationId (current session context), not stored DB locationId
+            // This prevents agency admins (who have null in DB) from seeing all users on sub-account pages
+            const locId = urlLocationId || user?.locationId || '';
             const res = await fetch(`/api/users?locationId=${locId}`);
             if (res.ok) {
                 const data = await res.json();

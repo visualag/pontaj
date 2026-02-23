@@ -35,7 +35,7 @@ interface TimeLog {
 }
 
 export default function AdminDashboard() {
-    const { user, isAdmin, isOwner, urlClaimsAdmin, loading: authLoading } = useAuth();
+    const { user, isAdmin, isOwner, urlClaimsAdmin, urlLocationId, loading: authLoading } = useAuth();
     const [logs, setLogs] = useState<TimeLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,7 +58,7 @@ export default function AdminDashboard() {
             const logsData = await logsRes.json();
             if (logsData.success) setLogs(logsData.logs);
 
-            const locId = user?.locationId || '';
+            const locId = urlLocationId || user?.locationId || '';
             const usersRes = await fetch(`/api/users?locationId=${locId}`);
             if (usersRes.ok) {
                 const users = await usersRes.json();
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
         setScheduleLoading(true);
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
-            const locId = user?.locationId || '';
+            const locId = urlLocationId || user?.locationId || '';
             const [usersRes, schedRes] = await Promise.all([
                 fetch(`/api/users?locationId=${locId}`),
                 fetch(`/api/schedule?mode=all&start=${dateStr}&end=${dateStr}&locationId=${locId}`)
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
                         userId={user?.userId || ''}
                         userName={user?.userName || ''}
                         isAdmin={isAdmin}
-                        locationId={user?.locationId || ''}
+                        locationId={urlLocationId || user?.locationId || ''}
                         onDateSelect={(date) => {
                             setGanttDate(date);
                             fetchGanttForDate(date);

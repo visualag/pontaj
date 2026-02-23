@@ -95,26 +95,26 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                     </div>
 
                     {/* Users Rows */}
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {sortedSchedules.map((sched, idx) => (
                             <div key={idx} className="flex items-center group/row">
                                 {/* User Info */}
-                                <div className="w-[180px] pr-6 shrink-0 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center border border-zinc-100 dark:border-zinc-700 group-hover/row:border-indigo-200 transition-all">
-                                        <UserIcon className="w-4 h-4 text-zinc-400 group-hover/row:text-indigo-500" />
+                                <div className="w-[180px] pr-4 shrink-0 flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 shrink-0">
+                                        <UserIcon className="w-3 h-3 text-zinc-400" />
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="font-black text-xs text-zinc-900 dark:text-zinc-100 truncate tracking-tight" title={sched.userName}>
+                                        <div className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 truncate leading-tight" title={sched.userName}>
                                             {sched.userName}
                                         </div>
-                                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
-                                            {sched.isOffDay ? 'Inactiv' : 'Activ'}
+                                        <div className="text-[9px] text-zinc-400 uppercase tracking-widest">
+                                            {sched.isOffDay ? 'Liber' : sched.hasSchedule ? 'Activ' : 'Nesetat'}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Gantt Bar Area */}
-                                <div className="flex-1 h-12 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner group-hover/row:shadow-md transition-all">
+                                <div className="flex-1 h-8 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner">
                                     {/* Grid Lines */}
                                     <div className="absolute inset-0 flex pointer-events-none opacity-20">
                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
