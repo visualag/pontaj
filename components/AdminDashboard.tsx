@@ -2,12 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
-import { Trash2, Edit2, Download, Search, Shield } from 'lucide-react';
+import { Trash2, Edit2, Download, Search, Shield, Settings, Users, Calendar, BarChart3 } from 'lucide-react';
 import EditLogModal from './EditLogModal';
 import ReportingWidget from './ReportingWidget';
 import TeamManagement from './TeamManagement';
 import FirstRunSetup from './FirstRunSetup';
 import GHLSyncButton from './GHLSyncButton';
+import DailyGanttModal from './DailyGanttModal';
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
+
+interface Schedule {
+    userId: string;
+    userName: string;
+    startTime: string;
+    endTime: string;
+    isOffDay: boolean;
+}
 
 interface TimeLog {
     _id: string;
@@ -29,30 +40,71 @@ export default function AdminDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingLog, setEditingLog] = useState<TimeLog | null>(null);
     const [showTeamManagement, setShowTeamManagement] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [memberCount, setMemberCount] = useState(0);
+    const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
+    const [scheduleLoading, setScheduleLoading] = useState(false);
 
-    const fetchLogs = async () => {
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+
+    const fetchData = async () => {
+        setLoading(true);
+        setScheduleLoading(true);
         try {
-            const res = await fetch(`/api/logs?role=admin&userId=${user?.userId}`); // Pass admin creds/role implicitly or explicitly
-            const data = await res.json();
-            if (data.success) {
-                setLogs(data.logs);
+            // Fetch logs
+            const logsRes = await fetch(`/api/logs?role=admin&userId=${user?.userId}`);
+            const logsData = await logsRes.json();
+            if (logsData.success) {
+                setLogs(logsData.logs);
+            }
+
+            // Fetch users (for member count and Gantt)
+            const locId = user?.locationId || '';
+            const usersRes = await fetch(`/api/users?locationId=${locId}`);
+            if (usersRes.ok) {
+                const users = await usersRes.json();
+                setMemberCount(users.length);
+
+                // Fetch today's schedule for Gantt
+                const schedRes = await fetch(`/api/schedule?mode=all&start=${todayStr}&end=${todayStr}&locationId=${locId}`);
+                if (schedRes.ok) {
+                    const schedules = await schedRes.json();
+                    const schedMap: Record<string, any> = {};
+                    schedules.forEach((s: any) => { schedMap[s.userId] = s; });
+
+                    const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+                    const result = users.map((u: any) => {
+                        const sched = schedMap[u.userId];
+                        const isOffDay = sched ? sched.isOffDay : isWeekend;
+                        return {
+                            userId: u.userId,
+                            userName: u.userName,
+                            startTime: isOffDay ? '-' : (sched?.startTime || '09:00'),
+                            endTime: isOffDay ? '-' : (sched?.endTime || '17:00'),
+                            isOffDay
+                        };
+                    });
+                    setTodaySchedules(result);
+                }
             }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+            setScheduleLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchLogs();
-    }, []);
+        fetchData();
+    }, [user?.locationId, todayStr]);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Sigur vrei sa stergi acest pontaj?')) return;
         try {
             await fetch(`/api/logs/${id}`, { method: 'DELETE' });
-            fetchLogs();
+            fetchData();
         } catch (e) {
             console.error(e);
         }
@@ -66,7 +118,7 @@ export default function AdminDashboard() {
                 body: JSON.stringify(data)
             });
             if (res.ok) {
-                fetchLogs();
+                fetchData();
             }
         } catch (e) {
             console.error(e);
@@ -106,53 +158,119 @@ export default function AdminDashboard() {
         (log.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <div>Checking backend...</div>;
+    if (loading && logs.length === 0) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+    );
 
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-8">
-            {/* First-run setup: visible to admins inside GHL iframe */}
-            <FirstRunSetup />
+            {/* Header */}
+            <header className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-zinc-900 p-6 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 gap-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Admin Dashboard</h1>
+                    <div className="flex items-center gap-4 mt-1">
+                        <div className="flex items-center gap-1.5 text-zinc-500 text-sm">
+                            <Users className="w-4 h-4" />
+                            <span>{memberCount} Membri Sincronizați</span>
+                        </div>
+                        <div className="w-1 h-1 rounded-full bg-zinc-300" />
+                        <div className="text-zinc-400 text-xs font-mono uppercase tracking-wider">
+                            {format(today, 'EEEE, d MMMM', { locale: ro })}
+                        </div>
+                    </div>
+                </div>
 
-            <header className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Admin Dashboard</h1>
-                <div className="flex gap-4">
-                    <div className="relative">
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                    <div className="relative mr-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                         <input
                             type="text"
                             placeholder="Cauta user..."
-                            className="pl-10 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="pl-10 pr-4 py-2 w-48 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <GHLSyncButton />
-                        {isOwner && (
-                            <button
-                                onClick={() => setShowTeamManagement(!showTeamManagement)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${showTeamManagement ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'}`}
-                            >
-                                <Shield className="w-4 h-4" />
-                                Echipa
-                            </button>
-                        )}
+
+                    <a
+                        href="/team"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                    >
+                        <Calendar className="w-4 h-4 text-indigo-500" />
+                        Calendar
+                    </a>
+
+                    {isOwner && (
                         <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                            onClick={() => setShowTeamManagement(!showTeamManagement)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${showTeamManagement ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50'}`}
                         >
-                            <Download className="w-4 h-4" />
-                            Export CSV
+                            <Shield className="w-4 h-4" />
+                            Echipa
                         </button>
-                    </div>
+                    )}
+
+                    <button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`p-2.5 rounded-xl border transition-all ${showSettings ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-indigo-600'}`}
+                        title="Setări API & Sincronizare"
+                    >
+                        <Settings className={`w-5 h-5 ${showSettings ? 'animate-spin-slow text-white' : ''}`} />
+                    </button>
+
+                    <button
+                        onClick={handleExport}
+                        className="p-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl hover:opacity-90 transition-all shadow-sm"
+                        title="Export CSV"
+                    >
+                        <Download className="w-5 h-5" />
+                    </button>
                 </div>
             </header>
+
+            {/* Setup panel — hidden behind cogwheel */}
+            {showSettings && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <FirstRunSetup />
+                </div>
+            )}
 
             {showTeamManagement && (
                 <div className="animate-in fade-in slide-in-from-top-4">
                     <TeamManagement />
                 </div>
             )}
+
+            {/* Today's Gantt — RESTORED */}
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                    <div>
+                        <h2 className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-indigo-500" />
+                            Suprapunere echipă astăzi
+                        </h2>
+                        <p className="text-xs text-zinc-400 mt-0.5">Programul vizual al tuturor membrilor</p>
+                    </div>
+                    <a href="/team" className="text-xs font-bold text-indigo-600 hover:underline">Vezi Săptămâna întreagă →</a>
+                </div>
+                <div className="p-4">
+                    {scheduleLoading ? (
+                        <div className="flex items-center justify-center py-8 text-zinc-400 text-sm">Se încarcă...</div>
+                    ) : todaySchedules.length === 0 ? (
+                        <div className="flex items-center justify-center py-8 text-zinc-400 text-sm italic">Niciun membru sincronizat.</div>
+                    ) : (
+                        <DailyGanttModal
+                            isOpen={true}
+                            onClose={() => { }}
+                            date={today}
+                            schedules={todaySchedules}
+                            isInline={true}
+                        />
+                    )}
+                </div>
+            </div>
 
             <ReportingWidget />
 
@@ -221,6 +339,6 @@ export default function AdminDashboard() {
                 log={editingLog}
                 onSave={handleUpdate}
             />
-        </div >
+        </div>
     );
 }
