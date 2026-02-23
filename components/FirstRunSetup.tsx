@@ -33,7 +33,19 @@ export default function FirstRunSetup() {
     const isPlaceholderId = ['location', '{location.id}', '{{location.id}}'].includes(rawLocationId.toLowerCase());
     const effectiveLocationId = isPlaceholderId ? '' : rawLocationId;
 
-    const currentCompanyId = companyId.trim() || user?.companyId || '';
+    const currentCompanyId = (companyId || '').trim() || user?.companyId || '';
+
+    // DIAGNOSTIC LOG (internal use)
+    useEffect(() => {
+        console.log('Setup Diagnostics:', {
+            raw: rawLocationId,
+            effective: effectiveLocationId,
+            isPlaceholder: isPlaceholderId,
+            companyState: companyId,
+            currentCompanyId,
+            version: '1.2.1'
+        });
+    }, [effectiveLocationId, currentCompanyId]);
 
     useEffect(() => {
         if (!effectiveLocationId && !currentCompanyId) {
@@ -55,7 +67,7 @@ export default function FirstRunSetup() {
                 if (!data.hasKey && !data.hasAgencyKey) setIsExpanded(true);
             })
             .catch(() => setSetup({ checked: true, hasKey: false, hasAgencyKey: false, hasCompanyId: false }));
-    }, [effectiveLocationId]);
+    }, [effectiveLocationId, currentCompanyId]);
 
     const handleSync = async () => {
         const locId = effectiveLocationId;

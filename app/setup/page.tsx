@@ -1,18 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Key, RefreshCw, CheckCircle, AlertCircle, Loader2, ArrowRight, Shield, Users } from 'lucide-react';
+import { Key, RefreshCw, CheckCircle, AlertCircle, Loader2, ArrowRight, Shield, Users, Building2 } from 'lucide-react';
 
 export default function SetupPage() {
     const [locationId, setLocationId] = useState('');
+    const [companyId, setCompanyId] = useState('');
     const [locationApiKey, setLocationApiKey] = useState('');
     const [agencyApiKey, setAgencyApiKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string; stats?: any } | null>(null);
 
+    const isPlaceholderId = ['location', '{location.id}', '{{location.id}}'].includes(locationId.toLowerCase());
+    const effectiveLocationId = isPlaceholderId ? '' : locationId.trim();
+    const currentCompanyId = companyId.trim();
+
     const handleSync = async () => {
-        if (!locationId.trim()) {
-            setResult({ success: false, message: 'Location ID este obligatoriu.' });
+        if (!effectiveLocationId && !currentCompanyId) {
+            setResult({ success: false, message: 'Introduceți un Location ID sau un Company ID.' });
             return;
         }
         if (!locationApiKey.trim() && !agencyApiKey.trim()) {
@@ -30,7 +35,8 @@ export default function SetupPage() {
                 body: JSON.stringify({
                     apiKey: locationApiKey,
                     agencyApiKey,
-                    locationId,
+                    locationId: effectiveLocationId || undefined,
+                    companyId: currentCompanyId || undefined,
                     updatedBy: 'setup-wizard'
                 })
             });
@@ -68,22 +74,34 @@ export default function SetupPage() {
                 {/* Card */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl space-y-6">
 
-                    {/* Step 1 — Location ID */}
-                    <div>
-                        <label className="block text-sm font-semibold text-zinc-300 mb-2">
-                            <span className="inline-flex items-center gap-2">
+                    {/* Step 1 — IDs */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-zinc-300 mb-2 flex items-center gap-2">
                                 <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-                                Location ID (din GHL)
-                            </span>
-                        </label>
-                        <input
-                            type="text"
-                            value={locationId}
-                            onChange={e => setLocationId(e.target.value)}
-                            placeholder="ex: lXXXXXXXXXXXXXXXXXXXX"
-                            className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
-                        />
-                        <p className="text-xs text-zinc-500 mt-1.5">GHL → Settings → Business Info → Sub-Account ID</p>
+                                Location ID (Sub-account)
+                            </label>
+                            <input
+                                type="text"
+                                value={locationId}
+                                onChange={e => setLocationId(e.target.value)}
+                                placeholder="ex: lXXXX..."
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-zinc-300 mb-2 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-indigo-400" />
+                                Company ID (Agenție)
+                            </label>
+                            <input
+                                type="text"
+                                value={companyId}
+                                onChange={e => setCompanyId(e.target.value)}
+                                placeholder="ex: ZxMj..."
+                                className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
+                            />
+                        </div>
                     </div>
 
                     {/* Step 2 — Location API Key */}
