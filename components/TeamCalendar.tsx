@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay, startOfDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ArrowLeft, RefreshCw, Key, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -305,7 +305,16 @@ export default function TeamCalendar() {
                             <div className="flex items-center gap-3">
                                 {!isEditingMe ? (
                                     <button
-                                        onClick={() => setIsEditingMe(true)}
+                                        onClick={() => {
+                                            // Prevent editing past dates for non-admins
+                                            const today = startOfDay(new Date());
+                                            const selected = startOfDay(selectedDate);
+                                            if (user?.role !== 'admin' && selected < today) {
+                                                alert('Nu poți modifica programul pentru zilele trecute.');
+                                                return;
+                                            }
+                                            setIsEditingMe(true);
+                                        }}
                                         className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all"
                                     >
                                         <Edit2 className="w-3 h-3" />

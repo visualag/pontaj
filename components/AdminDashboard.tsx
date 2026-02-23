@@ -199,10 +199,10 @@ export default function AdminDashboard() {
 
                     <a
                         href="/team"
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                        className="group flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/40 transform hover:-translate-y-0.5"
                     >
-                        <Calendar className="w-4 h-4 text-indigo-500" />
-                        Calendar
+                        <Users className="w-5 h-5" />
+                        <span className="text-sm font-bold">Vezi Echipa</span>
                     </a>
 
                     {isOwner && (

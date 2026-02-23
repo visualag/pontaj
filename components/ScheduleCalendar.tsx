@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, subDays, isSameDay, parse, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, startOfWeek, addDays, subDays, isSameDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, startOfDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Save, Loader2, Check } from 'lucide-react';
 
@@ -56,8 +56,11 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
 
     const handleDateClick = (date: Date) => {
         // Prevent editing past dates unless admin
-        if (!isAdmin && date < new Date() && !isSameDay(date, new Date())) {
-            alert('Nu poti modifica programul din trecut.');
+        const today = startOfDay(new Date());
+        const targetDate = startOfDay(date);
+
+        if (!isAdmin && targetDate < today) {
+            alert('Nu poți modifica programul pentru zilele trecute.');
             return;
         }
 

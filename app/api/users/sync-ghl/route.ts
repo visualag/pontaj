@@ -131,6 +131,18 @@ export async function POST(request: Request) {
                     const email = ghlUser.email || '';
                     const userLocationId = ghlUser.locationId || effectiveLocationId || null;
 
+                    // Skip placeholder users (GHL defaults like {{user.name}} or similar)
+                    const isPlaceholderUser =
+                        userName.includes('{{') ||
+                        userName.includes('}}') ||
+                        email.includes('{{') ||
+                        email.includes('test') && email.includes('@');
+
+                    if (isPlaceholderUser) {
+                        pushLog(`Skipping placeholder user: ${userName} (${email})`);
+                        continue;
+                    }
+
                     let role: 'user' | 'admin' = 'user';
                     const ghlRole = (ghlUser.role || ghlUser.type || '').toLowerCase();
                     const rolesType = (ghlUser.roles?.type || '').toLowerCase();
