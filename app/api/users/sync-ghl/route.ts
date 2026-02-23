@@ -45,16 +45,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    const logs: string[] = [];
+    const pushLog = (msg: string) => {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[SYNC LOG ${timestamp}] ${msg}`);
+        logs.push(`${timestamp}: ${msg}`);
+    };
+
     try {
         await dbConnect();
-        let { apiKey, agencyApiKey, locationId, companyId } = await request.json();
+        let { apiKey, agencyApiKey, locationId, companyId, updatedBy } = await request.json();
+
+        pushLog(`Starting sync for User: ${updatedBy || 'unknown'}`);
+        pushLog(`Input: locationId=${locationId}, companyId=${companyId}, hasLocKey=${!!apiKey}, hasAgencyKey=${!!agencyApiKey}`);
 
         // Normalize placeholder locationId
-        const isPlaceholder = !locationId || ['location', '{location.id}', '{{location.id}}'].includes(locationId.toLowerCase());
+        const isPlaceholder = !locationId || ['location', '{location.id}', '{{location.id}}'].includes(String(locationId).toLowerCase());
         const effectiveLocationId = isPlaceholder ? null : locationId;
+        pushLog(`Effective Location ID: ${effectiveLocationId || 'NONE (Placeholder or empty)'}`);
 
         if (!effectiveLocationId && !companyId) {
-            return NextResponse.json({ error: 'Introduceți un Location ID sau un Company ID.' }, { status: 400 });
+            pushLog('Validation failed: No valid IDs provided.');
+            return NextResponse.json({ error: 'Introduceți un Location ID sau un Company ID.', logs }, { status: 400 });
         }
 
         // --- 1. SAVE/UPDATE SETTINGS ---
@@ -64,133 +76,162 @@ export async function POST(request: Request) {
         if (companyId) updateFields.companyId = companyId;
         if (effectiveLocationId) updateFields.locationId = effectiveLocationId;
 
-        // Try to find existing record by locationId OR companyId
         let query: any = {};
         if (effectiveLocationId) query.locationId = effectiveLocationId;
         else if (companyId) query.companyId = companyId;
 
+        pushLog(`Updating settings in DB using query: ${JSON.stringify(query)}`);
         const settings = await LocationSettings.findOneAndUpdate(
             query,
             updateFields,
             { upsert: true, new: true }
         );
+        pushLog(`Settings saved/updated. ID in DB: ${settings?._id}`);
 
         // --- 2. RESOLVE KEYS TO USE ---
-        const activeApiKey = apiKey || settings?.apiKey;
-        const activeAgencyKey = agencyApiKey || settings?.agencyApiKey;
-        const activeCompanyId = companyId || settings?.companyId;
+        const activeApiKey = (apiKey || settings?.apiKey || '').trim();
+        const activeAgencyKey = (agencyApiKey || settings?.agencyApiKey || '').trim();
+        const activeCompanyId = (companyId || settings?.companyId || '').trim();
+
+        pushLog(`Resolved keys: activeLocKey=${!!activeApiKey}, activeAgencyKey=${!!activeAgencyKey}, activeCompanyId=${activeCompanyId || 'NONE'}`);
 
         if (!activeApiKey && !activeAgencyKey) {
-            return NextResponse.json({ error: 'Lipsesc cheile API (Private Integration Tokens).' }, { status: 400 });
+            pushLog('Validation failed: No API keys found.');
+            return NextResponse.json({ error: 'Lipsesc cheile API (Private Integration Tokens).', logs }, { status: 400 });
         }
 
-        const stats = { total: 0, added: 0, updated: 0, agencyUsers: 0 };
+        const stats = { total: 0, added: 0, updated: 0, agencyUsers: 0, errors: [] as string[] };
 
         // GHL API V2 base + headers helper
         const GHL_V2_BASE = 'https://services.leadconnectorhq.com';
         const ghlV2Headers = (token: string) => ({
             'Authorization': `Bearer ${token}`,
             'Version': '2021-07-28',
-            'Content-Type': 'application/json'
+            'Accept': 'application/json'
         });
 
         // Helper to upsert GHL users into our DB
         const processUsers = async (users: any[], source: 'location' | 'agency') => {
+            pushLog(`Processing ${users.length} users from ${source}...`);
+            if (users.length > 0) {
+                pushLog(`Sample user from GHL: ${JSON.stringify(users[0]).substring(0, 200)}...`);
+            }
+
             for (const ghlUser of users) {
-                const userId = ghlUser.id;
-                if (!userId) continue;
-
-                const firstName = ghlUser.firstName || '';
-                const lastName = ghlUser.lastName || '';
-                const userName = ghlUser.name || `${firstName} ${lastName}`.trim() || 'Unknown';
-                const email = ghlUser.email || '';
-                const userLocationId = ghlUser.locationId || effectiveLocationId || locationId;
-
-                let role: 'user' | 'admin' = 'user';
-                // If synced via Agency key OR GHL says they are admin/agency/owner
-                const ghlRole = ghlUser.role || ghlUser.type || '';
-                const rolesType = ghlUser.roles?.type || '';
-                if (
-                    source === 'agency' ||
-                    ghlRole === 'admin' || ghlRole === 'agency' || ghlRole === 'owner' ||
-                    rolesType === 'admin' || rolesType === 'agency'
-                ) {
-                    role = 'admin';
-                }
-
-                const existingUser = await User.findOne({ userId });
-                if (!existingUser) {
-                    await User.create({
-                        userId, userName, email,
-                        locationId: userLocationId,
-                        role, isOwner: false,
-                        lastSeen: new Date()
-                    });
-                    stats.added++;
-                } else {
-                    existingUser.userName = userName;
-                    existingUser.email = email;
-                    // Only update locationId if the current one is placeholder or it changed
-                    if (!existingUser.locationId || ['location', '{location.id}'].includes(existingUser.locationId)) {
-                        existingUser.locationId = userLocationId;
+                try {
+                    const userId = ghlUser.id;
+                    if (!userId) {
+                        pushLog('Skipping a GHL user because it has no ID field.');
+                        continue;
                     }
-                    if (role === 'admin') existingUser.role = 'admin';
-                    await existingUser.save();
-                    stats.updated++;
+
+                    const firstName = ghlUser.firstName || '';
+                    const lastName = ghlUser.lastName || '';
+                    const userName = ghlUser.name || `${firstName} ${lastName}`.trim() || 'Unknown';
+                    const email = ghlUser.email || '';
+                    const userLocationId = ghlUser.locationId || effectiveLocationId || null;
+
+                    let role: 'user' | 'admin' = 'user';
+                    const ghlRole = (ghlUser.role || ghlUser.type || '').toLowerCase();
+                    const rolesType = (ghlUser.roles?.type || '').toLowerCase();
+
+                    if (
+                        source === 'agency' ||
+                        ['admin', 'agency', 'owner'].includes(ghlRole) ||
+                        ['admin', 'agency'].includes(rolesType)
+                    ) {
+                        role = 'admin';
+                    }
+
+                    const existingUser = await User.findOne({ userId });
+                    if (!existingUser) {
+                        await User.create({
+                            userId, userName, email,
+                            locationId: userLocationId,
+                            role, isOwner: false,
+                            lastSeen: new Date()
+                        });
+                        stats.added++;
+                    } else {
+                        existingUser.userName = userName;
+                        existingUser.email = email;
+                        if (!existingUser.locationId || ['location', '{location.id}'].includes(existingUser.locationId)) {
+                            existingUser.locationId = userLocationId;
+                        }
+                        if (role === 'admin') existingUser.role = 'admin';
+                        await existingUser.save();
+                        stats.updated++;
+                    }
+                } catch (userErr: any) {
+                    pushLog(`Error processing individual user: ${userErr.message}`);
                 }
             }
         };
 
         // --- 3. SYNC LOCATION USERS ---
         if (activeApiKey && effectiveLocationId) {
-            console.log(`Syncing Location Users for ${effectiveLocationId}...`);
+            pushLog(`Attempting Location Sync for ${effectiveLocationId}...`);
             try {
                 const response = await fetch(`${GHL_V2_BASE}/users/?locationId=${effectiveLocationId}`, {
                     headers: ghlV2Headers(activeApiKey)
                 });
 
+                pushLog(`Location API Status: ${response.status}`);
                 if (response.ok) {
                     const data = await response.json();
                     const users = data.users || (Array.isArray(data) ? data : []);
-                    console.log(`Found ${users.length} location users.`);
+                    pushLog(`Found ${users.length} location-level users.`);
                     await processUsers(users, 'location');
                     stats.total += users.length;
+                } else {
+                    const errText = await response.text();
+                    pushLog(`Location API Error Response: ${errText.substring(0, 500)}`);
+                    stats.errors.push(`Location API Error: ${response.status}`);
                 }
-            } catch (err) {
-                console.error('Location Sync Failed', err);
+            } catch (err: any) {
+                pushLog(`Location Sync Exception: ${err.message}`);
+                stats.errors.push(`Loc sync exception: ${err.message}`);
             }
         }
 
         // --- 4. SYNC AGENCY USERS ---
         if (activeAgencyKey) {
-            console.log(`Syncing Agency Users (CompanyID: ${activeCompanyId})...`);
+            pushLog(`Attempting Agency Sync (CompanyID: ${activeCompanyId || 'ALL USERS'})...`);
             try {
-                const url = activeCompanyId
-                    ? `${GHL_V2_BASE}/users/?companyId=${activeCompanyId}`
-                    : `${GHL_V2_BASE}/users/`;
+                let url = `${GHL_V2_BASE}/users/`;
+                if (activeCompanyId) url += `?companyId=${activeCompanyId}`;
 
+                pushLog(`Agency URL: ${url}`);
                 const response = await fetch(url, { headers: ghlV2Headers(activeAgencyKey) });
 
+                pushLog(`Agency API Status: ${response.status}`);
                 if (response.ok) {
                     const data = await response.json();
                     let allUsers = data.users || (Array.isArray(data) ? data : []);
-                    console.log(`Total users returned from Agency API: ${allUsers.length}`);
+                    pushLog(`Agency API returned ${allUsers.length} total users.`);
 
-                    // INCLUSIVE IMPORT: We import EVERYONE returned by the agency key.
-                    // This fixes the "zero users" issue where filters were too strict.
+                    if (allUsers.length === 0) {
+                        pushLog('WARNING: Agency API returned 0 users. This usually means the API key lacks "users.readonly" scope or the Company ID is incorrect/unauthorized.');
+                    }
+
                     await processUsers(allUsers, 'agency');
                     stats.total += allUsers.length;
                     stats.agencyUsers = allUsers.length;
+                } else {
+                    const errText = await response.text();
+                    pushLog(`Agency API Error Response: ${errText.substring(0, 500)}`);
+                    stats.errors.push(`Agency API Error: ${response.status}`);
                 }
-            } catch (err) {
-                console.error('Agency Sync Failed', err);
+            } catch (err: any) {
+                pushLog(`Agency Sync Exception: ${err.message}`);
+                stats.errors.push(`Agency sync exception: ${err.message}`);
             }
         }
 
-        return NextResponse.json({ success: true, stats });
-
+        pushLog(`Sync complete. Total: ${stats.total}, Added: ${stats.added}, Updated: ${stats.updated}`);
+        return NextResponse.json({ success: true, stats, logs });
     } catch (error: any) {
-        console.error('Sync Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        pushLog(`CRITICAL API ERROR: ${error.message}`);
+        return NextResponse.json({ error: 'Internal Server Error', details: error.message, logs }, { status: 500 });
     }
 }

@@ -75,7 +75,9 @@ export async function GET(request: Request) {
         const locationId = searchParams.get('locationId');
 
         const query: any = {};
-        if (locationId) {
+        const isPlaceholder = !locationId || ['location', '{location.id}', '{{location.id}}'].includes(String(locationId).toLowerCase());
+
+        if (locationId && !isPlaceholder) {
             query.locationId = locationId;
         }
 
