@@ -23,7 +23,7 @@ export default function FirstRunSetup() {
     const [setup, setSetup] = useState<SetupState>({ checked: false, hasKey: false, hasAgencyKey: false, hasCompanyId: false });
     const [isExpanded, setIsExpanded] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+    const [result, setResult] = useState<{ success: boolean; message: string; logs?: string[] } | null>(null);
 
     // Effective location ID: from URL, or manually entered, or from localStorage
     const rawLocationId = user?.locationId
@@ -107,7 +107,8 @@ export default function FirstRunSetup() {
                 }
                 setResult({
                     success: true,
-                    message: `✅ ${data.stats?.total ?? 0} utilizatori importați (${data.stats?.added ?? 0} noi, ${data.stats?.updated ?? 0} actualizați).`
+                    message: `✅ ${data.stats?.total ?? 0} utilizatori importați (${data.stats?.added ?? 0} noi, ${data.stats?.updated ?? 0} actualizați).`,
+                    logs: data.logs
                 });
                 setSetup(prev => ({
                     ...prev,
@@ -117,9 +118,11 @@ export default function FirstRunSetup() {
                 }));
                 setLocationApiKey('');
                 setAgencyApiKey('');
-                setTimeout(() => window.location.reload(), 2500);
+                if (data.stats?.total > 0) {
+                    setTimeout(() => window.location.reload(), 3000);
+                }
             } else {
-                setResult({ success: false, message: data.error || 'Eroare la sincronizare.' });
+                setResult({ success: false, message: data.error || 'Eroare la sincronizare.', logs: data.logs });
             }
         } catch {
             setResult({ success: false, message: 'Eroare de conexiune.' });
@@ -262,13 +265,27 @@ export default function FirstRunSetup() {
                         </div>
                     </div>
 
+                    {/* Result and Logs */}
                     {result && (
-                        <div className={`flex items-start gap-2.5 p-3 rounded-lg text-sm ${result.success
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-                            }`}>
-                            {result.success ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
-                            <span>{result.message}</span>
+                        <div className={`p-4 rounded-xl border ${result.success ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                            <div className="flex items-start gap-3">
+                                {result.success ? <CheckCircle className="w-5 h-5 mt-0.5" /> : <AlertCircle className="w-5 h-5 mt-0.5" />}
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold">{result.message}</p>
+
+                                    {/* Diagnostic Logs (Expandable if 0 users or error) */}
+                                    {result.logs && result.logs.length > 0 && (
+                                        <div className="mt-3">
+                                            <details className="cursor-pointer">
+                                                <summary className="text-xs font-bold opacity-70 underline hover:opacity-100">Vezi diagnoză tehnică (pentru suport)</summary>
+                                                <div className="mt-2 p-3 bg-zinc-900 text-zinc-300 font-mono text-[10px] rounded-lg overflow-x-auto max-h-60 whitespace-pre-wrap">
+                                                    {result.logs.join('\n')}
+                                                </div>
+                                            </details>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 
