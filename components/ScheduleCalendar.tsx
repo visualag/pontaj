@@ -18,9 +18,10 @@ interface Props {
     userName: string;
     isAdmin?: boolean;
     locationId?: string;
+    onDateSelect?: (date: Date) => void;
 }
 
-export default function ScheduleCalendar({ userId, userName, isAdmin, locationId }: Props) {
+export default function ScheduleCalendar({ userId, userName, isAdmin, locationId, onDateSelect }: Props) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,12 +56,16 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
     };
 
     const handleDateClick = (date: Date) => {
-        // Prevent editing past dates unless admin
         const today = startOfDay(new Date());
         const targetDate = startOfDay(date);
+        const isPast = targetDate < today;
 
-        if (targetDate < today) {
-            alert('Nu poți modifica programul pentru zilele trecute.');
+        // Always notify parent of selection (for Gantt)
+        if (onDateSelect) onDateSelect(date);
+
+        // For past days: select for Gantt view only, don't open edit form
+        if (isPast) {
+            setSelectedDate(date);
             return;
         }
 
@@ -76,7 +81,7 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
         } else {
             setStartTime('09:00');
             setEndTime('17:00');
-            setIsOffDay(isWeekend); // Default off for weekends
+            setIsOffDay(isWeekend);
         }
     };
 
@@ -161,12 +166,12 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
                             key={date.toString()}
                             onClick={() => handleDateClick(date)}
                             className={`
-                h-14 rounded-lg flex flex-col items-center justify-center text-xs border transition-all
-                ${isSelected ? 'border-primary ring-2 ring-primary/20 z-10' : 'border-transparent'}
-                ${isToday ? 'bg-zinc-50 dark:bg-zinc-800 font-bold' : ''}
+                h-14 rounded-lg flex flex-col items-center justify-center text-xs border transition-all cursor-pointer
+                ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-500/20 z-10 bg-indigo-50 dark:bg-indigo-950/20' : 'border-transparent'}
+                ${isToday && !isSelected ? 'bg-zinc-50 dark:bg-zinc-800 font-bold ring-1 ring-zinc-300 dark:ring-zinc-700' : ''}
                 ${sched?.isOffDay || (!sched && (date.getDay() === 0 || date.getDay() === 6)) ? 'bg-red-50 text-red-400 dark:bg-red-900/10' : ''}
                 ${!sched && !isToday && !isSelected ? 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50' : ''}
-                ${!isAdmin && date < new Date() && !isToday ? 'opacity-50 cursor-not-allowed' : ''}
+                ${date < startOfDay(new Date()) && !isToday ? 'opacity-40' : ''}
               `}
                         >
                             <span className="mb-1">{format(date, 'd')}</span>
@@ -181,8 +186,8 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
                 })}
             </div>
 
-            {/* Edit Section */}
-            {selectedDate && (
+            {/* Edit Section — only future/today */}
+            {selectedDate && startOfDay(selectedDate) >= startOfDay(new Date()) && (
                 <div className="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl animate-in slide-in-from-top-2">
                     <div className="flex items-center justify-between mb-4">
                         <span className="font-medium">
