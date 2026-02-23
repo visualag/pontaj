@@ -260,9 +260,85 @@ export default function AdminDashboard() {
             )}
 
             {showSettings && isAdmin && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-6">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-8">
                     <FirstRunSetup />
                     <TeamManagement />
+
+                    {/* Admin Reports & Logs moved here */}
+                    <div className="space-y-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                        <ReportingWidget />
+
+                        <div className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                            <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <h3 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3 uppercase tracking-tighter">
+                                    <BarChart3 className="w-6 h-6 text-indigo-500" />
+                                    Jurnal Pontaj
+                                </h3>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-zinc-50/50 dark:bg-zinc-800/30 text-left text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 italic">
+                                            <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Utilizator</th>
+                                            <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Interval</th>
+                                            <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Durată</th>
+                                            <th className="p-7 font-bold uppercase tracking-widest text-[10px]">În Lucru</th>
+                                            <th className="p-7 text-right font-bold uppercase tracking-widest text-[10px]">Edit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                        {filteredLogs.map(log => (
+                                            <tr key={log._id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
+                                                <td className="p-7">
+                                                    <div className="font-black text-zinc-900 dark:text-white mb-0.5">{log.userName}</div>
+                                                    <div className="text-xs text-zinc-400 font-medium italic">{log.email}</div>
+                                                    <div className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 mt-1 uppercase tracking-wider">{log.dateString}</div>
+                                                </td>
+                                                <td className="p-7">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs font-black text-zinc-800 dark:text-zinc-200">{new Date(log.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        {log.checkOut ? (
+                                                            <span className="text-[10px] text-zinc-400 font-bold">{new Date(log.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-emerald-500 font-black animate-pulse uppercase tracking-widest">În sesiune</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-7">
+                                                    <div className="font-black text-indigo-600 dark:text-indigo-400 italic">
+                                                        {log.duration ? `${log.duration} min` : '-'}
+                                                    </div>
+                                                </td>
+                                                <td className="p-7">
+                                                    {log.isActive ? (
+                                                        <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" />
+                                                    ) : (
+                                                        <div className="w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+                                                    )}
+                                                </td>
+                                                <td className="p-7 text-right">
+                                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
+                                                        <button onClick={() => setEditingLog(log)} className="p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-indigo-600 rounded-2xl transition-all border border-transparent hover:border-indigo-100">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(log._id)} className="p-3 hover:bg-rose-50 dark:hover:bg-rose-900/40 text-rose-600 rounded-2xl transition-all border border-transparent hover:border-rose-100">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {filteredLogs.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="p-20 text-center text-zinc-400 italic font-medium">Niciun rezultat găsit</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -335,83 +411,6 @@ export default function AdminDashboard() {
                         </button>
                     )}
 
-                    {isAdmin && (
-                        <>
-                            <ReportingWidget />
-
-                            {/* Activity Feed - Admin only */}
-                            <div className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                    <h3 className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-3 uppercase tracking-tighter">
-                                        <BarChart3 className="w-6 h-6 text-indigo-500" />
-                                        Jurnal Pontaj
-                                    </h3>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="bg-zinc-50/50 dark:bg-zinc-800/30 text-left text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 italic">
-                                                <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Utilizator</th>
-                                                <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Interval</th>
-                                                <th className="p-7 font-bold uppercase tracking-widest text-[10px]">Durată</th>
-                                                <th className="p-7 font-bold uppercase tracking-widest text-[10px]">În Lucru</th>
-                                                <th className="p-7 text-right font-bold uppercase tracking-widest text-[10px]">Edit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                            {filteredLogs.map(log => (
-                                                <tr key={log._id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
-                                                    <td className="p-7">
-                                                        <div className="font-black text-zinc-900 dark:text-white mb-0.5">{log.userName}</div>
-                                                        <div className="text-xs text-zinc-400 font-medium italic">{log.email}</div>
-                                                        <div className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 mt-1 uppercase tracking-wider">{log.dateString}</div>
-                                                    </td>
-                                                    <td className="p-7">
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="text-xs font-black text-zinc-800 dark:text-zinc-200">{new Date(log.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            {log.checkOut ? (
-                                                                <span className="text-[10px] text-zinc-400 font-bold">{new Date(log.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            ) : (
-                                                                <span className="text-[10px] text-emerald-500 font-black animate-pulse uppercase tracking-widest">În sesiune</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-7">
-                                                        <div className="font-black text-indigo-600 dark:text-indigo-400 italic">
-                                                            {log.duration ? `${log.duration} min` : '-'}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-7">
-                                                        {log.isActive ? (
-                                                            <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" />
-                                                        ) : (
-                                                            <div className="w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-                                                        )}
-                                                    </td>
-                                                    <td className="p-7 text-right">
-                                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
-                                                            <button onClick={() => setEditingLog(log)} className="p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-indigo-600 rounded-2xl transition-all border border-transparent hover:border-indigo-100">
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            <button onClick={() => handleDelete(log._id)} className="p-3 hover:bg-rose-50 dark:hover:bg-rose-900/40 text-rose-600 rounded-2xl transition-all border border-transparent hover:border-rose-100">
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {filteredLogs.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={5} className="p-20 text-center text-zinc-400 italic font-medium">Niciun rezultat găsit</td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
 
                 </div>
             </div>
