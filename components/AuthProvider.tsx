@@ -9,6 +9,7 @@ interface UserData {
     email: string;
     role: string;
     locationId?: string;
+    companyId?: string;
     isOwner?: boolean;
     urlRole?: string; // GHL-claimed role from URL — for first-run UI only, never for security
 }
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userName = searchParams.get('name') || searchParams.get('userName') || 'Unknown';
         const email = searchParams.get('email') || '';
         const locationId = searchParams.get('location_id') || searchParams.get('locationId');
+        const companyId = searchParams.get('company_id') || searchParams.get('companyId');
 
         // Capture GHL's claimed role — multiple possible param names GHL might send
         const urlRole =
@@ -51,7 +53,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (userId) {
             // Set optimistic state immediately — page renders FAST, no waiting for DB
-            const optimisticUser = { userId, userName, email, role: 'user', locationId: locationId || undefined, urlRole };
+            const optimisticUser = {
+                userId, userName, email,
+                role: 'user',
+                locationId: locationId || undefined,
+                companyId: companyId || undefined,
+                urlRole
+            };
             setUser(optimisticUser);
             setLoading(false); // ← IMMEDIATELY show the page, don't wait for DB
 

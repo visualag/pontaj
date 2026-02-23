@@ -213,7 +213,7 @@ export default function FirstRunSetup() {
                                 placeholder={setup.hasKey ? '●●●●●●●● (lasă gol pentru a păstra)' : 'Private Integration Token — Location'}
                                 className="w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/40 placeholder-zinc-400"
                             />
-                            <p className="text-[10px] text-zinc-400 mt-1">GHL → (în sub-account) → Settings → Integrations → Private Integrations → Create Key</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">GHL → sub-account settings → <strong>Integrations</strong> → cu scroll până jos la <strong>Private Integrations</strong> → Create Key</p>
                         </div>
 
                         {/* Agency Key */}
@@ -229,7 +229,7 @@ export default function FirstRunSetup() {
                                 placeholder={setup.hasAgencyKey ? '●●●●●●●● (lasă gol pentru a păstra)' : 'Private Integration Token — Agency'}
                                 className="w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/40 placeholder-zinc-400"
                             />
-                            <p className="text-[10px] text-zinc-400 mt-1">GHL → (nivel agenție) → Settings → API Keys → Create Key</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">GHL → agency settings → <strong>Integrations</strong> → cu scroll până jos la <strong>Private Integrations</strong> → Create Key</p>
                         </div>
                     </div>
 
