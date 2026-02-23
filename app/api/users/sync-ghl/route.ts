@@ -172,7 +172,7 @@ export async function POST(request: Request) {
         if (activeApiKey && effectiveLocationId) {
             pushLog(`Attempting Location Sync for ${effectiveLocationId}...`);
             try {
-                const response = await fetch(`${GHL_V2_BASE}/users/?locationId=${effectiveLocationId}`, {
+                const response = await fetch(`${GHL_V2_BASE}/users?locationId=${effectiveLocationId}`, {
                     headers: ghlV2Headers(activeApiKey)
                 });
 
@@ -198,13 +198,29 @@ export async function POST(request: Request) {
         if (activeAgencyKey) {
             pushLog(`Attempting Agency Sync (CompanyID: ${activeCompanyId || 'ALL USERS'})...`);
             try {
-                let url = `${GHL_V2_BASE}/users/`;
+                let url = `${GHL_V2_BASE}/users`;
                 if (activeCompanyId) url += `?companyId=${activeCompanyId}`;
 
                 pushLog(`Agency URL: ${url}`);
-                const response = await fetch(url, { headers: ghlV2Headers(activeAgencyKey) });
+                let response = await fetch(url, { headers: ghlV2Headers(activeAgencyKey) });
 
-                pushLog(`Agency API Status: ${response.status}`);
+                pushLog(`Agency V2 API Status: ${response.status}`);
+
+                // FALLBACK for 422 (LocationId missing) or other errors
+                if (!response.ok) {
+                    const errText = await response.text();
+                    pushLog(`V2 Agency failed (${response.status}: ${errText}), falling back to V1...`);
+
+                    const v1Url = activeCompanyId
+                        ? `https://rest.gohighlevel.com/v1/users/?companyId=${activeCompanyId}`
+                        : `https://rest.gohighlevel.com/v1/users/`;
+
+                    response = await fetch(v1Url, {
+                        headers: { 'Authorization': `Bearer ${activeAgencyKey}` }
+                    });
+                    pushLog(`Agency V1 API Status: ${response.status}`);
+                }
+
                 if (response.ok) {
                     const data = await response.json();
                     let allUsers = data.users || (Array.isArray(data) ? data : []);
@@ -219,7 +235,7 @@ export async function POST(request: Request) {
                     stats.agencyUsers = allUsers.length;
                 } else {
                     const errText = await response.text();
-                    pushLog(`Agency API Error Response: ${errText.substring(0, 500)}`);
+                    pushLog(`Agency API (Final) Error Response: ${errText.substring(0, 500)}`);
                     stats.errors.push(`Agency API Error: ${response.status}`);
                 }
             } catch (err: any) {
