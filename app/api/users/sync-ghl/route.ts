@@ -136,7 +136,7 @@ export async function POST(request: Request) {
                         userName.includes('{{') ||
                         userName.includes('}}') ||
                         email.includes('{{') ||
-                        email.includes('test') && email.includes('@');
+                        (email.includes('test') && email.includes('@'));
 
                     if (isPlaceholderUser) {
                         pushLog(`Skipping placeholder user: ${userName} (${email})`);

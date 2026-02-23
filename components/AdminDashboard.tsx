@@ -409,7 +409,6 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    <TeamManagement />
                 </div>
             </div>
 
