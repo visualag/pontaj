@@ -6,6 +6,7 @@ import { Users, Settings } from 'lucide-react';
 import ScheduleCalendar from './ScheduleCalendar';
 import FirstRunSetup from './FirstRunSetup';
 import DailyGanttModal from './DailyGanttModal';
+import TimeLogPanel from './TimeLogPanel';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -122,6 +123,16 @@ export default function UserDashboard() {
                 </div>
             )}
 
+            {/* Time Tracking Section */}
+            <TimeLogPanel
+                userId={user.userId}
+                userName={user.userName || ''}
+                email={user.email || ''}
+                onStatusChange={() => {
+                    // Force refresh or update state if needed
+                }}
+            />
+
             {/* Schedule - current user */}
             <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
                 <ScheduleCalendar
@@ -135,11 +146,14 @@ export default function UserDashboard() {
             {/* Today's team gantt — visible when locationId is available */}
             {user?.locationId && (
                 <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <h2 className="font-semibold text-zinc-800 dark:text-zinc-200">
-                            Suprapunere echipă — {format(today, 'EEEE, d MMMM', { locale: ro })}
-                        </h2>
-                        <p className="text-xs text-zinc-400 mt-0.5">Programul tuturor membrilor astăzi</p>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                        <div>
+                            <h2 className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                Suprapunere echipă — {format(today, 'EEEE, d MMMM', { locale: ro })}
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-0.5">Programul membrilor astăzi</p>
+                        </div>
+                        <a href="/team" className="text-xs font-bold text-indigo-600 hover:underline">Vezi Săptămâna →</a>
                     </div>
                     <div className="p-4">
                         {scheduleLoading ? (
@@ -148,7 +162,7 @@ export default function UserDashboard() {
                             </div>
                         ) : todaySchedules.length === 0 ? (
                             <div className="flex items-center justify-center py-8 text-zinc-400 text-sm">
-                                Niciun utilizator sincronizat. Folosiți butonul GHL Sync.
+                                Niciun utilizator sincronizat.
                             </div>
                         ) : (
                             <DailyGanttModal

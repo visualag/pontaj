@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, RefreshCw, Key } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, RefreshCw, Key, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import GHLSyncButton from './GHLSyncButton';
@@ -27,6 +27,13 @@ export default function TeamCalendar() {
     const [loading, setLoading] = useState(true);
     // Default to today so Gantt is always visible
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+    // Quick Edit state
+    const [isEditingMe, setIsEditingMe] = useState(false);
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('17:00');
+    const [isOffDay, setIsOffDay] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const daysOfWeek = eachDayOfInterval({
         start: currentWeekStart,
@@ -63,6 +70,57 @@ export default function TeamCalendar() {
         }
     };
 
+    useEffect(() => {
+        if (selectedDate && user?.userId) {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            const mySched = schedules.find(s => s.userId === user.userId && s.dateString === dateStr);
+            if (mySched) {
+                setStartTime(mySched.startTime);
+                setEndTime(mySched.endTime);
+                setIsOffDay(mySched.isOffDay);
+            } else {
+                const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+                setStartTime('09:00');
+                setEndTime('17:00');
+                setIsOffDay(isWeekend);
+            }
+        }
+    }, [selectedDate, schedules, user?.userId]);
+
+    const handleQuickSave = async () => {
+        if (!user?.userId || !selectedDate) return;
+        setSaving(true);
+        try {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            const res = await fetch('/api/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.userId,
+                    userName: user.userName,
+                    role: user.role === 'admin' ? 'admin' : 'user',
+                    dateString: dateStr,
+                    startTime,
+                    endTime,
+                    isOffDay,
+                    locationId: user.locationId
+                }),
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                setSchedules(prev => {
+                    const filtered = prev.filter(s => !(s.userId === user.userId && s.dateString === dateStr));
+                    return [...filtered, updated];
+                });
+                setIsEditingMe(false);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSaving(false);
+        }
+    };
     const scheduleMap: Record<string, Record<string, Schedule>> = {};
     schedules.forEach(s => {
         if (!scheduleMap[s.userId]) scheduleMap[s.userId] = {};
@@ -243,7 +301,63 @@ export default function TeamCalendar() {
                                     Suprapunere ore — {format(selectedDate, 'EEEE, d MMMM', { locale: ro })}
                                 </span>
                             </div>
-                            <span className="text-xs text-zinc-400">Click pe zi pentru a schimba</span>
+
+                            <div className="flex items-center gap-3">
+                                {!isEditingMe ? (
+                                    <button
+                                        onClick={() => setIsEditingMe(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all"
+                                    >
+                                        <Edit2 className="w-3 h-3" />
+                                        Modifică Programul Meu
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                                        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+                                            <input
+                                                type="time"
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                disabled={isOffDay}
+                                                className="bg-transparent border-none text-[10px] p-0 w-16 focus:ring-0 text-center font-bold"
+                                            />
+                                            <span className="text-[10px] opacity-30">–</span>
+                                            <input
+                                                type="time"
+                                                value={endTime}
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                disabled={isOffDay}
+                                                className="bg-transparent border-none text-[10px] p-0 w-16 focus:ring-0 text-center font-bold"
+                                            />
+                                        </div>
+                                        <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={isOffDay}
+                                                onChange={(e) => setIsOffDay(e.target.checked)}
+                                                className="w-3 h-3 rounded"
+                                            />
+                                            Liber
+                                        </label>
+                                        <button
+                                            onClick={handleQuickSave}
+                                            disabled={saving}
+                                            className="p-1 px-2 bg-emerald-600 text-white rounded-md text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50"
+                                        >
+                                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvează'}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEditingMe(false)}
+                                            className="p-1 text-zinc-400 hover:text-zinc-600"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                                <span className="text-[10px] text-zinc-400 border-l border-zinc-200 dark:border-zinc-800 pl-3 ml-1">
+                                    Click zi în table pentru schimbare
+                                </span>
+                            </div>
                         </div>
                         <div className="p-4">
                             <DailyGanttModal
