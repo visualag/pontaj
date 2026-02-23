@@ -88,7 +88,21 @@ export default function TeamManagement() {
         }
     };
 
-    // if (!isOwner) return null; // Removed to allow viewing by Admins
+    const handleDelete = async (targetUserId: string, targetName: string) => {
+        if (!confirm(`Sigur vrei să ștergi utilizatorul "${targetName}" din sistem? Această acțiune este ireversibilă.`)) return;
+        try {
+            const res = await fetch(`/api/users/${targetUserId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setMembers(prev => prev.filter(m => m.userId !== targetUserId));
+            } else {
+                alert('Eroare la ștergere.');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // if (!isOwner) return null;
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
@@ -183,6 +197,14 @@ export default function TeamManagement() {
                                                         title="Seteaza ca Singurul Administrator (Owner)"
                                                     >
                                                         Seteaza Owner
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleDelete(member.userId, member.userName)}
+                                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        title="Sterge utilizatorul din sistem"
+                                                    >
+                                                        <X className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             )}
