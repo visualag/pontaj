@@ -34,23 +34,24 @@ export default function TeamCalendar() {
     });
 
     useEffect(() => {
-        if (user?.locationId) {
+        // Fetch if we have any ID or if we are an admin (can see all)
+        if (user?.userId) {
             fetchData();
         } else {
-            setLoading(false); // Stop spinner immediately if no locationId
+            setLoading(false);
         }
-    }, [currentWeekStart, user?.locationId]);
+    }, [currentWeekStart, user?.userId, user?.locationId]);
 
     const fetchData = async () => {
-        if (!user?.locationId) return;
         setLoading(true);
         try {
             const start = format(daysOfWeek[0], 'yyyy-MM-dd');
             const end = format(daysOfWeek[6], 'yyyy-MM-dd');
+            const locId = user?.locationId || '';
 
             const [usersRes, schedRes] = await Promise.all([
-                fetch(`/api/users?locationId=${user.locationId}`),
-                fetch(`/api/schedule?mode=all&start=${start}&end=${end}&locationId=${user.locationId}`)
+                fetch(`/api/users?locationId=${locId}`),
+                fetch(`/api/schedule?mode=all&start=${start}&end=${end}&locationId=${locId}`)
             ]);
 
             if (usersRes.ok) setUsers(await usersRes.json());
