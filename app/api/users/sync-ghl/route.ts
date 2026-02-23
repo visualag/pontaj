@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         await dbConnect();
-        let { apiKey, agencyApiKey, locationId } = await request.json();
+        let { apiKey, agencyApiKey, locationId, companyId } = await request.json();
 
         if (!locationId) {
             return NextResponse.json({ error: 'Missing Location ID' }, { status: 400 });
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         const updateFields: any = { updatedAt: new Date() };
         if (apiKey) updateFields.apiKey = apiKey;
         if (agencyApiKey) updateFields.agencyApiKey = agencyApiKey;
+        if (companyId) updateFields.companyId = companyId;
 
         const settings = await LocationSettings.findOneAndUpdate(
             { locationId },
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
         // --- 2. RESOLVE KEYS TO USE ---
         const activeApiKey = apiKey || settings?.apiKey;
         const activeAgencyKey = agencyApiKey || settings?.agencyApiKey;
+        const activeCompanyId = companyId || settings?.companyId;
 
         if (!activeApiKey && !activeAgencyKey) {
             return NextResponse.json({ error: 'Missing API Keys (None provided or saved)' }, { status: 400 });
@@ -84,6 +86,8 @@ export async function POST(request: Request) {
                     }
                 }
 
+                // IMPORTANT: When syncing from agency level, we update the user's role to admin
+                // even if they were previously synced as a regular user from a location level.
                 const existingUser = await User.findOne({ userId });
                 if (!existingUser) {
                     await User.create({
@@ -95,6 +99,9 @@ export async function POST(request: Request) {
                 } else {
                     existingUser.userName = userName;
                     existingUser.email = email;
+                    // If we have a locationId from this sync, use it. 
+                    // But don't overwrite user's location if we are just syncing agency admins globally?
+                    // For now, keep it simple.
                     existingUser.locationId = locationId;
                     if (source === 'agency') existingUser.role = 'admin';
                     await existingUser.save();
@@ -107,14 +114,14 @@ export async function POST(request: Request) {
         if (activeApiKey) {
             console.log('Syncing Location Users via GHL API V2...');
             try {
-                let response = await fetch(`${GHL_V2_BASE}/users/`, {
+                let response = await fetch(`${GHL_V2_BASE}/users/?locationId=${locationId}`, {
                     headers: ghlV2Headers(activeApiKey)
                 });
 
                 if (!response.ok) {
                     // Fallback to V1
                     console.warn('V2 failed, falling back to V1 for location...');
-                    response = await fetch('https://rest.gohighlevel.com/v1/users/', {
+                    response = await fetch(`https://rest.gohighlevel.com/v1/users/?locationId=${locationId}`, {
                         headers: { 'Authorization': `Bearer ${activeApiKey}` }
                     });
                 }
@@ -138,7 +145,12 @@ export async function POST(request: Request) {
         if (activeAgencyKey) {
             console.log('Syncing Agency Users via GHL API V2...');
             try {
-                let response = await fetch(`${GHL_V2_BASE}/users/`, {
+                // If we have activeCompanyId, use it to filter users at the agency level
+                const url = activeCompanyId
+                    ? `${GHL_V2_BASE}/users/?companyId=${activeCompanyId}`
+                    : `${GHL_V2_BASE}/users/`;
+
+                let response = await fetch(url, {
                     headers: ghlV2Headers(activeAgencyKey)
                 });
 
@@ -153,8 +165,8 @@ export async function POST(request: Request) {
                     const data = await response.json();
                     let allUsers = data.users || (Array.isArray(data) ? data : []);
 
-                    // Filter agency-level users. If no `type` field exists on any user,
-                    // trust the key scope (the agency key only returns agency users).
+                    // If we have a companyId, we trust the GHL filter.
+                    // If not, we still try to filter for agency-level users.
                     const hasTypeField = allUsers.some((u: any) => u.type || u.roles?.type);
                     const users = hasTypeField
                         ? allUsers.filter((u: any) =>

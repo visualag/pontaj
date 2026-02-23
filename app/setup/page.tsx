@@ -98,10 +98,10 @@ export default function SetupPage() {
                             type="text"
                             value={locationApiKey}
                             onChange={e => setLocationApiKey(e.target.value)}
-                            placeholder="Private Integration Token sau V1 Key"
+                            placeholder="Private Integration Token — Location"
                             className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
                         />
-                        <p className="text-xs text-zinc-500 mt-1.5">GHL → Settings → API Keys → Location Level</p>
+                        <p className="text-xs text-zinc-500 mt-1.5">GHL → Sub-account Settings → <strong>Integrations</strong> → scroll jos la <strong>Private Integrations</strong></p>
                     </div>
 
                     {/* Step 3 — Agency API Key */}
@@ -116,17 +116,17 @@ export default function SetupPage() {
                             type="text"
                             value={agencyApiKey}
                             onChange={e => setAgencyApiKey(e.target.value)}
-                            placeholder="Agency Private Integration Token"
+                            placeholder="Private Integration Token — Agency"
                             className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition"
                         />
-                        <p className="text-xs text-zinc-500 mt-1.5">GHL → Agency Settings → API Keys → Agency Level</p>
+                        <p className="text-xs text-zinc-500 mt-1.5">GHL → Agency Settings → <strong>Integrations</strong> → scroll jos la <strong>Private Integrations</strong></p>
                     </div>
 
                     {/* Info Box */}
                     <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-xl p-4 flex gap-3">
                         <Key className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                         <p className="text-xs text-indigo-300 leading-relaxed">
-                            Cheile API sunt <strong>salvate criptat</strong> în baza de date și nu sunt expuse în interfață. Le puteți înlocui oricând revenind pe această pagină.
+                            Folosiți <strong>Private Integration Tokens</strong> (GHL API V2). Cheile vechi (V1) pot să nu returneze toți utilizatorii agenției în mod fiabil.
                         </p>
                     </div>
 
