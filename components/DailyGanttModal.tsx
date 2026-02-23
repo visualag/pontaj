@@ -78,9 +78,9 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                     </button>
                 )}
                 {isInline && (
-                    <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-zinc-600">
-                        <span className="text-sm font-medium mr-2">Inchide</span>
-                        <X className="w-4 h-4 inline" />
+                    <button onClick={onClose} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 group">
+                        <span className="text-xs font-bold uppercase tracking-wider">Inchide</span>
+                        <X className="w-4 h-4" />
                     </button>
                 )}
             </header>

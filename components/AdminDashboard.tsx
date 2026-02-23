@@ -9,6 +9,8 @@ import TeamManagement from './TeamManagement';
 import FirstRunSetup from './FirstRunSetup';
 import GHLSyncButton from './GHLSyncButton';
 import DailyGanttModal from './DailyGanttModal';
+import TimeLogPanel from './TimeLogPanel';
+import ScheduleCalendar from './ScheduleCalendar';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -44,6 +46,7 @@ export default function AdminDashboard() {
     const [memberCount, setMemberCount] = useState(0);
     const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
     const [scheduleLoading, setScheduleLoading] = useState(false);
+    const [showGantt, setShowGantt] = useState(true);
 
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
@@ -243,36 +246,74 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {/* Today's Gantt — RESTORED */}
-            <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                    <div>
-                        <h2 className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-indigo-500" />
-                            Suprapunere echipă astăzi
-                        </h2>
-                        <p className="text-xs text-zinc-400 mt-0.5">Programul vizual al tuturor membrilor</p>
-                    </div>
-                    <a href="/team" className="text-xs font-bold text-indigo-600 hover:underline">Vezi Săptămâna întreagă →</a>
+            {/* Admin's Personal Time Tracking & Schedule */}
+            <div className="grid lg:grid-cols-2 gap-8">
+                <div className="space-y-8">
+                    <TimeLogPanel
+                        userId={user?.userId || ''}
+                        userName={user?.userName || ''}
+                        email={user?.email || ''}
+                        onStatusChange={fetchData}
+                    />
+                    <ScheduleCalendar
+                        userId={user?.userId || ''}
+                        userName={user?.userName || ''}
+                        isAdmin={true}
+                        locationId={user?.locationId || ''}
+                    />
                 </div>
-                <div className="p-4">
-                    {scheduleLoading ? (
-                        <div className="flex items-center justify-center py-8 text-zinc-400 text-sm">Se încarcă...</div>
-                    ) : todaySchedules.length === 0 ? (
-                        <div className="flex items-center justify-center py-8 text-zinc-400 text-sm italic">Niciun membru sincronizat.</div>
-                    ) : (
-                        <DailyGanttModal
-                            isOpen={true}
-                            onClose={() => { }}
-                            date={today}
-                            schedules={todaySchedules}
-                            isInline={true}
-                        />
-                    )}
+
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-indigo-500" />
+                            Statistici Rapide
+                        </h3>
+                        {!showGantt && (
+                            <button
+                                onClick={() => setShowGantt(true)}
+                                className="text-xs font-bold text-indigo-600 hover:underline"
+                            >
+                                Afișează Suprapunere →
+                            </button>
+                        )}
+                    </div>
+                    <ReportingWidget />
                 </div>
             </div>
 
-            <ReportingWidget />
+            {/* Today's Gantt — RESTORED */}
+            {showGantt && (
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                        <div>
+                            <h2 className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-indigo-500" />
+                                Suprapunere echipă astăzi
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-0.5">Programul vizual al tuturor membrilor</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <a href="/team" className="text-xs font-bold text-indigo-600 hover:underline">Vezi Săptămâna →</a>
+                        </div>
+                    </div>
+                    <div className="p-4 relative">
+                        {scheduleLoading ? (
+                            <div className="flex items-center justify-center py-8 text-zinc-400 text-sm">Se încarcă...</div>
+                        ) : todaySchedules.length === 0 ? (
+                            <div className="flex items-center justify-center py-8 text-zinc-400 text-sm italic">Niciun membru sincronizat.</div>
+                        ) : (
+                            <DailyGanttModal
+                                isOpen={true}
+                                onClose={() => setShowGantt(false)}
+                                date={today}
+                                schedules={todaySchedules}
+                                isInline={true}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                 <div className="overflow-x-auto">
