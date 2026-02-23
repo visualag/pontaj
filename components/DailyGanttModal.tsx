@@ -95,7 +95,7 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                     </div>
 
                     {/* Users Rows */}
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         {sortedSchedules.map((sched, idx) => (
                             <div key={idx} className="flex items-center group/row">
                                 {/* User Info */}
@@ -114,7 +114,7 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                                 </div>
 
                                 {/* Gantt Bar Area */}
-                                <div className="flex-1 h-8 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner">
+                                <div className="flex-1 h-10 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner">
                                     {/* Grid Lines */}
                                     <div className="absolute inset-0 flex pointer-events-none opacity-20">
                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
