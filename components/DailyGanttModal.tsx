@@ -64,22 +64,22 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
 
     const Content = (
         <div className={`flex flex-col h-full bg-white dark:bg-zinc-900 ${isInline ? '' : 'rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[90vh] border border-zinc-100 dark:border-zinc-800'} overflow-hidden`}>
-            <header className="flex justify-between items-center px-10 py-8 border-b border-zinc-50 dark:border-zinc-800">
-                <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-3 uppercase italic tracking-tighter">
-                        <Clock className="w-7 h-7 text-indigo-500" />
-                        Analiză Suprapuneri
-                    </h2>
-                    <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-1">
-                        {format(date, 'EEEE, d MMMM yyyy', { locale: ro })}
-                    </p>
-                </div>
-                {!isInline && (
+            {!isInline && (
+                <header className="flex justify-between items-center px-10 py-8 border-b border-zinc-50 dark:border-zinc-800">
+                    <div>
+                        <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-3 uppercase italic tracking-tighter">
+                            <Clock className="w-7 h-7 text-indigo-500" />
+                            Prezență Office
+                        </h2>
+                        <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                            {format(date, 'EEEE, d MMMM yyyy', { locale: ro })}
+                        </p>
+                    </div>
                     <button onClick={onClose} className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 rounded-2xl transition-all">
                         <X className="w-5 h-5 text-zinc-400" />
                     </button>
-                )}
-            </header>
+                </header>
+            )}
 
             <div className={`flex-1 overflow-x-auto p-8 ${isInline ? '' : 'overflow-y-auto'}`}>
                 <div className="min-w-[800px] flex flex-col gap-6">
