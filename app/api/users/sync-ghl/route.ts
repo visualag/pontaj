@@ -198,36 +198,22 @@ export async function POST(request: Request) {
         if (activeAgencyKey) {
             pushLog(`Attempting Agency Sync (CompanyID: ${activeCompanyId || 'ALL USERS'})...`);
             try {
-                let url = `${GHL_V2_BASE}/users`;
-                if (activeCompanyId) url += `?companyId=${activeCompanyId}`;
+                // IMPORTANT: In GHL V2, to list all company users, we use /users/search
+                let url = `${GHL_V2_BASE}/users/search?limit=100`;
+                if (activeCompanyId) url += `&companyId=${activeCompanyId}`;
 
-                pushLog(`Agency URL: ${url}`);
-                let response = await fetch(url, { headers: ghlV2Headers(activeAgencyKey) });
+                pushLog(`Agency Search URL: ${url}`);
+                const response = await fetch(url, { headers: ghlV2Headers(activeAgencyKey) });
 
-                pushLog(`Agency V2 API Status: ${response.status}`);
-
-                // FALLBACK for 422 (LocationId missing) or other errors
-                if (!response.ok) {
-                    const errText = await response.text();
-                    pushLog(`V2 Agency failed (${response.status}: ${errText}), falling back to V1...`);
-
-                    const v1Url = activeCompanyId
-                        ? `https://rest.gohighlevel.com/v1/users/?companyId=${activeCompanyId}`
-                        : `https://rest.gohighlevel.com/v1/users/`;
-
-                    response = await fetch(v1Url, {
-                        headers: { 'Authorization': `Bearer ${activeAgencyKey}` }
-                    });
-                    pushLog(`Agency V1 API Status: ${response.status}`);
-                }
+                pushLog(`Agency Search API Status: ${response.status}`);
 
                 if (response.ok) {
                     const data = await response.json();
                     let allUsers = data.users || (Array.isArray(data) ? data : []);
-                    pushLog(`Agency API returned ${allUsers.length} total users.`);
+                    pushLog(`Agency Search API returned ${allUsers.length} total users.`);
 
                     if (allUsers.length === 0) {
-                        pushLog('WARNING: Agency API returned 0 users. This usually means the API key lacks "users.readonly" scope or the Company ID is incorrect/unauthorized.');
+                        pushLog('WARNING: Agency Search returned 0 users. Check if the token has "users.readonly" scope.');
                     }
 
                     await processUsers(allUsers, 'agency');
@@ -235,12 +221,12 @@ export async function POST(request: Request) {
                     stats.agencyUsers = allUsers.length;
                 } else {
                     const errText = await response.text();
-                    pushLog(`Agency API (Final) Error Response: ${errText.substring(0, 500)}`);
-                    stats.errors.push(`Agency API Error: ${response.status}`);
+                    pushLog(`Agency Search API Error Response: ${errText.substring(0, 500)}`);
+                    stats.errors.push(`Agency Search API Error: ${response.status}`);
                 }
             } catch (err: any) {
-                pushLog(`Agency Sync Exception: ${err.message}`);
-                stats.errors.push(`Agency sync exception: ${err.message}`);
+                pushLog(`Agency Search Exception: ${err.message}`);
+                stats.errors.push(`Agency search exception: ${err.message}`);
             }
         }
 
