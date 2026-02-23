@@ -19,6 +19,8 @@ export async function DELETE() {
                 { userId: 'JDrhQtQ7dGE93h7odSqg' },
                 { userId: 'JDrhQtQ7dGEvFhF83Sqg' },
                 { userId: 'ewYJUHEpmcAuBHMjgzak' }, // test1 test1
+                { userId: 'SuDSBek2TbPSRmUZP5C4' }, // MSG MODA ALISS - sub-account client
+                { userId: 'BTtn9q0ujLZ8nlcxOJW0' }, // Moda Aliss USR - sub-account client
                 // Users with placeholder locationId string
                 { locationId: 'location' },
             ]
