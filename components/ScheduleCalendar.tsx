@@ -28,10 +28,10 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
     const [saving, setSaving] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-    // Edit form state
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('17:00');
     const [isOffDay, setIsOffDay] = useState(false);
+    const [applyWholeWeek, setApplyWholeWeek] = useState(false);
 
     useEffect(() => {
         fetchSchedules();
@@ -89,30 +89,41 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
         if (!selectedDate || !userId) return;
         setSaving(true);
         try {
-            const dateString = format(selectedDate, 'yyyy-MM-dd');
-            const res = await fetch('/api/schedule', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId,
-                    userName,
-                    role: isAdmin ? 'admin' : 'user',
-                    dateString,
-                    startTime,
-                    endTime,
-                    isOffDay,
-                    locationId // Pass it to save
-                }),
+            // Determine which dates to save
+            const datesToSave: string[] = [];
+
+            if (applyWholeWeek) {
+                // Get Monday of the selected week (locale: week starts Monday)
+                const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
+                for (let i = 0; i < 5; i++) { // Mon=0 ... Fri=4
+                    datesToSave.push(format(addDays(monday, i), 'yyyy-MM-dd'));
+                }
+            } else {
+                datesToSave.push(format(selectedDate, 'yyyy-MM-dd'));
+            }
+
+            const saves = datesToSave.map(dateString =>
+                fetch('/api/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId, userName,
+                        role: isAdmin ? 'admin' : 'user',
+                        dateString, startTime, endTime, isOffDay, locationId
+                    }),
+                }).then(r => r.ok ? r.json() : null)
+            );
+
+            const results = await Promise.all(saves);
+            const saved = results.filter(Boolean);
+
+            setSchedules(prev => {
+                const savedDates = saved.map((s: Schedule) => s.dateString);
+                const filtered = prev.filter(s => !savedDates.includes(s.dateString));
+                return [...filtered, ...saved];
             });
 
-            if (res.ok) {
-                const updated = await res.json();
-                setSchedules(prev => {
-                    const filtered = prev.filter(s => s.dateString !== dateString);
-                    return [...filtered, updated];
-                });
-                // Optional: Close modal or show success
-            }
+            setApplyWholeWeek(false);
         } catch (e) {
             console.error(e);
         } finally {
@@ -226,6 +237,20 @@ export default function ScheduleCalendar({ userId, userName, isAdmin, locationId
                                 className="w-4 h-4 rounded border-zinc-300"
                             />
                             <label htmlFor="isOffDay" className="text-sm">Zi Libera</label>
+                        </div>
+
+                        <div className="flex items-center gap-2 pb-2">
+                            <input
+                                type="checkbox"
+                                id="applyWholeWeek"
+                                checked={applyWholeWeek}
+                                onChange={(e) => setApplyWholeWeek(e.target.checked)}
+                                disabled={isOffDay}
+                                className="w-4 h-4 rounded border-zinc-300 accent-indigo-500"
+                            />
+                            <label htmlFor="applyWholeWeek" className={`text-sm ${isOffDay ? 'text-zinc-400' : 'text-indigo-600 font-medium'}`}>
+                                Același program Lun–Vin
+                            </label>
                         </div>
 
                         <button

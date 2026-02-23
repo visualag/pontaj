@@ -64,22 +64,22 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
 
     const Content = (
         <div className={`flex flex-col h-full bg-white dark:bg-zinc-900 ${isInline ? '' : 'rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[90vh] border border-zinc-100 dark:border-zinc-800'} overflow-hidden`}>
-            <header className="flex justify-between items-center px-10 py-8 border-b border-zinc-50 dark:border-zinc-800">
-                <div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-3 uppercase italic tracking-tighter">
-                        <Clock className="w-7 h-7 text-indigo-500" />
-                        Analiză Suprapuneri
-                    </h2>
-                    <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-1">
-                        {format(date, 'EEEE, d MMMM yyyy', { locale: ro })}
-                    </p>
-                </div>
-                {!isInline && (
+            {!isInline && (
+                <header className="flex justify-between items-center px-10 py-8 border-b border-zinc-50 dark:border-zinc-800">
+                    <div>
+                        <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-3 uppercase italic tracking-tighter">
+                            <Clock className="w-7 h-7 text-indigo-500" />
+                            Prezență Office
+                        </h2>
+                        <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                            {format(date, 'EEEE, d MMMM yyyy', { locale: ro })}
+                        </p>
+                    </div>
                     <button onClick={onClose} className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 rounded-2xl transition-all">
                         <X className="w-5 h-5 text-zinc-400" />
                     </button>
-                )}
-            </header>
+                </header>
+            )}
 
             <div className={`flex-1 overflow-x-auto p-8 ${isInline ? '' : 'overflow-y-auto'}`}>
                 <div className="min-w-[800px] flex flex-col gap-6">
@@ -95,26 +95,26 @@ export default function DailyGanttView({ isOpen, onClose, date, schedules, isInl
                     </div>
 
                     {/* Users Rows */}
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {sortedSchedules.map((sched, idx) => (
                             <div key={idx} className="flex items-center group/row">
                                 {/* User Info */}
-                                <div className="w-[180px] pr-6 shrink-0 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center border border-zinc-100 dark:border-zinc-700 group-hover/row:border-indigo-200 transition-all">
-                                        <UserIcon className="w-4 h-4 text-zinc-400 group-hover/row:text-indigo-500" />
+                                <div className="w-[180px] pr-4 shrink-0 flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 shrink-0">
+                                        <UserIcon className="w-3 h-3 text-zinc-400" />
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="font-black text-xs text-zinc-900 dark:text-zinc-100 truncate tracking-tight" title={sched.userName}>
+                                        <div className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 truncate leading-tight" title={sched.userName}>
                                             {sched.userName}
                                         </div>
-                                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
-                                            {sched.isOffDay ? 'Inactiv' : 'Activ'}
+                                        <div className="text-[9px] text-zinc-400 uppercase tracking-widest">
+                                            {sched.isOffDay ? 'Liber' : sched.hasSchedule ? 'Activ' : 'Nesetat'}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Gantt Bar Area */}
-                                <div className="flex-1 h-12 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner group-hover/row:shadow-md transition-all">
+                                <div className="flex-1 h-8 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl relative overflow-hidden border border-zinc-100 dark:border-zinc-900 shadow-inner">
                                     {/* Grid Lines */}
                                     <div className="absolute inset-0 flex pointer-events-none opacity-20">
                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (

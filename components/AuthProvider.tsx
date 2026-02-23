@@ -19,7 +19,8 @@ interface AuthContextType {
     loading: boolean;
     isAdmin: boolean;
     isOwner: boolean;
-    urlClaimsAdmin: boolean; // GHL URL claims admin — only for first-run setup UI
+    urlClaimsAdmin: boolean;
+    urlLocationId: string | null; // Always the locationId from current URL — never overwritten by DB
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     isAdmin: false,
     isOwner: false,
     urlClaimsAdmin: false,
+    urlLocationId: null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const searchParams = useSearchParams();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [urlLocationId, setUrlLocationId] = useState<string | null>(null);
 
     useEffect(() => {
         const userId = searchParams.get('user_id') || searchParams.get('userId');
@@ -44,15 +47,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const locationId = searchParams.get('location_id') || searchParams.get('locationId');
         const companyId = searchParams.get('company_id') || searchParams.get('companyId');
 
-        // Capture GHL's claimed role — multiple possible param names GHL might send
         const urlRole =
             searchParams.get('role') ||
             searchParams.get('user_type') ||
             searchParams.get('type') ||
             'user';
 
+        // Store URL locationId separately — never overwritten by DB sync
+        const isPlaceholderLoc = !locationId || ['location', '{location.id}', '{{location.id}}'].includes(String(locationId).toLowerCase());
+        if (!isPlaceholderLoc) {
+            setUrlLocationId(locationId);
+        }
+
         if (userId) {
-            // Set optimistic state immediately — page renders FAST, no waiting for DB
             const optimisticUser = {
                 userId, userName, email,
                 role: 'user',
@@ -61,28 +68,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 urlRole
             };
             setUser(optimisticUser);
-            setLoading(false); // ← IMMEDIATELY show the page, don't wait for DB
+            setLoading(false);
 
-            // Then silently upgrade role from DB in background (no loading spinner)
             fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, userName, email, locationId })
-                // NOTE: Never send 'role' — DB is authoritative, URL role is never trusted for security
             })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.user) {
-                        // Silently upgrade role from DB without showing loading
                         setUser(prev => ({
                             ...prev!,
                             ...data.user,
-                            urlRole // preserve URL-claimed role for first-run UI detection
+                            // Preserve URL locationId if DB has no locationId stored for this user
+                            locationId: data.user.locationId || prev?.locationId,
+                            urlRole
                         }));
                     }
                 })
                 .catch(err => console.error('Failed to sync user with DB:', err));
-            // No .finally(setLoading) — loading was already set to false above
         } else {
             setLoading(false);
         }
@@ -100,7 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user?.urlRole === 'Agency';
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAdmin, isOwner, urlClaimsAdmin }}>
+        <AuthContext.Provider value={{ user, loading, isAdmin, isOwner, urlClaimsAdmin, urlLocationId }}>
             {children}
         </AuthContext.Provider>
     );
