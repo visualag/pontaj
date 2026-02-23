@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, isSameDay, startOfDay } from 'date-fns';
 import { ro } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ArrowLeft, RefreshCw, Key, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -113,7 +113,7 @@ export default function TeamCalendar() {
                     const filtered = prev.filter(s => !(s.userId === user.userId && s.dateString === dateStr));
                     return [...filtered, updated];
                 });
-                setIsEditingMe(false);
+                setIsEditingMe(true);
             }
         } catch (e) {
             console.error(e);
@@ -262,7 +262,12 @@ export default function TeamCalendar() {
                                                 <td
                                                     key={dateStr}
                                                     className={`p-2 text-center align-top h-16 cursor-pointer ${isToday ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''} ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}
-                                                    onClick={() => setSelectedDate(day)}
+                                                    onClick={() => {
+                                                        setSelectedDate(day);
+                                                        if (u.userId === user?.userId) {
+                                                            setIsEditingMe(true);
+                                                        }
+                                                    }}
                                                 >
                                                     {sched ? (
                                                         sched.isOffDay ? (
@@ -291,82 +296,84 @@ export default function TeamCalendar() {
                     </div>
                 </div>
 
-                {/* ── Gantt Bar — PERMANENT, default today, changes on day click ── */}
+                {/* ── Gantt & Quick Edit — INTEGRATED ── */}
                 {users.length > 0 && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                        <div className="px-6 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <CalendarIcon className="w-4 h-4 text-indigo-500" />
-                                <span className="font-semibold text-sm text-zinc-700 dark:text-zinc-300">
-                                    Suprapunere ore — {format(selectedDate, 'EEEE, d MMMM', { locale: ro })}
-                                </span>
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
+                                <div className="flex items-center gap-2">
+                                    <CalendarIcon className="w-5 h-5 text-indigo-500" />
+                                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                        Suprapunere ore — {format(selectedDate, 'EEEE, d MMMM', { locale: ro })}
+                                    </span>
+                                </div>
+                                <span className="text-[10px] text-zinc-400 font-medium">Click pe o zi în tabel pentru a schimba data</span>
                             </div>
-
-                            <div className="flex items-center gap-3">
-                                {!isEditingMe ? (
-                                    <button
-                                        onClick={() => setIsEditingMe(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all"
-                                    >
-                                        <Edit2 className="w-3 h-3" />
-                                        Modifică Programul Meu
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
-                                        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-                                            <input
-                                                type="time"
-                                                value={startTime}
-                                                onChange={(e) => setStartTime(e.target.value)}
-                                                disabled={isOffDay}
-                                                className="bg-transparent border-none text-[10px] p-0 w-16 focus:ring-0 text-center font-bold"
-                                            />
-                                            <span className="text-[10px] opacity-30">–</span>
-                                            <input
-                                                type="time"
-                                                value={endTime}
-                                                onChange={(e) => setEndTime(e.target.value)}
-                                                disabled={isOffDay}
-                                                className="bg-transparent border-none text-[10px] p-0 w-16 focus:ring-0 text-center font-bold"
-                                            />
-                                        </div>
-                                        <label className="flex items-center gap-1 text-[10px] cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={isOffDay}
-                                                onChange={(e) => setIsOffDay(e.target.checked)}
-                                                className="w-3 h-3 rounded"
-                                            />
-                                            Liber
-                                        </label>
-                                        <button
-                                            onClick={handleQuickSave}
-                                            disabled={saving}
-                                            className="p-1 px-2 bg-emerald-600 text-white rounded-md text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50"
-                                        >
-                                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvează'}
-                                        </button>
-                                        <button
-                                            onClick={() => setIsEditingMe(false)}
-                                            className="p-1 text-zinc-400 hover:text-zinc-600"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                )}
-                                <span className="text-[10px] text-zinc-400 border-l border-zinc-200 dark:border-zinc-800 pl-3 ml-1">
-                                    Click zi în table pentru schimbare
-                                </span>
+                            <div className="p-4">
+                                <DailyGanttModal
+                                    isOpen={true}
+                                    onClose={() => { }}
+                                    date={selectedDate}
+                                    schedules={getSchedulesForDate(selectedDate)}
+                                    isInline={true}
+                                />
                             </div>
                         </div>
-                        <div className="p-4">
-                            <DailyGanttModal
-                                isOpen={true}
-                                onClose={() => { }}
-                                date={selectedDate}
-                                schedules={getSchedulesForDate(selectedDate)}
-                                isInline={true}
-                            />
+
+                        {/* Integrated Edit Form */}
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 p-6 flex flex-col">
+                            <h3 className="font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
+                                <Edit2 className="w-4 h-4 text-indigo-500" />
+                                Programul meu detaliat
+                            </h3>
+                            <p className="text-xs text-zinc-400 mb-6">Pentru {format(selectedDate, 'd MMMM', { locale: ro })}</p>
+
+                            <div className="space-y-6 flex-1">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pornire</label>
+                                        <input
+                                            type="time"
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            disabled={isOffDay}
+                                            className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all p-3"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Oprire</label>
+                                        <input
+                                            type="time"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            disabled={isOffDay}
+                                            className="w-full bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all p-3"
+                                        />
+                                    </div>
+                                </div>
+
+                                <label className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all border border-transparent hover:border-zinc-200 dark:hover:border-zinc-600">
+                                    <div className={`w-10 h-6 rounded-full relative transition-colors ${isOffDay ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isOffDay}
+                                            onChange={(e) => setIsOffDay(e.target.checked)}
+                                            className="hidden"
+                                        />
+                                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isOffDay ? 'left-5' : 'left-1'}`} />
+                                    </div>
+                                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Zi Liberă / Concediu</span>
+                                </label>
+                            </div>
+
+                            <button
+                                onClick={handleQuickSave}
+                                disabled={saving}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all mt-6"
+                            >
+                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                                Salvează Programul
+                            </button>
                         </div>
                     </div>
                 )}

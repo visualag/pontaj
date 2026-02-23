@@ -38,30 +38,12 @@ export default function Home() {
     );
   }
 
-  // Admin (confirmed by DB) → AdminDashboard (already has FirstRunSetup inside)
-  if (isAdmin) {
+  // Admin confirmat în DB SAU confirmat doar de GHL URL (optimist)
+  // Randăm dashboard-ul imediat pentru a evita flickering-ul și dispariția calendarului
+  if (isAdmin || urlClaimsAdmin) {
     return (
       <main className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 pt-10">
         <AdminDashboard />
-      </main>
-    );
-  }
-
-  // GHL says admin but DB hasn't confirmed yet (first login, not synced yet)
-  // Show a minimal page with just the setup panel
-  if (urlClaimsAdmin) {
-    return (
-      <main className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 pt-10">
-        <div className="max-w-3xl mx-auto p-6 space-y-6">
-          <div className="text-center py-4">
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">Admin — Prima Conectare</h1>
-            <p className="text-zinc-500 text-sm">Sincronizați echipa GHL pentru a accesa dashboard-ul complet.</p>
-          </div>
-          <FirstRunSetup />
-          <p className="text-center text-xs text-zinc-400 mt-4">
-            După sincronizare, reîncărcați pagina pentru a accesa Admin Dashboard.
-          </p>
-        </div>
       </main>
     );
   }

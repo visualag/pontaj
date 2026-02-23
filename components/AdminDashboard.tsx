@@ -36,7 +36,7 @@ interface TimeLog {
 }
 
 export default function AdminDashboard() {
-    const { user, isOwner } = useAuth();
+    const { user, isAdmin, isOwner, urlClaimsAdmin } = useAuth();
     const [logs, setLogs] = useState<TimeLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -161,6 +161,26 @@ export default function AdminDashboard() {
         (log.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
+    if (!isAdmin && urlClaimsAdmin) {
+        return (
+            <div className="max-w-4xl mx-auto p-10 space-y-8 text-center bg-white dark:bg-zinc-900 rounded-3xl mt-10 shadow-xl border border-zinc-100 dark:border-zinc-800">
+                <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center mb-4">
+                    <Shield className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h1 className="text-3xl font-bold">Configurare Admin</h1>
+                <p className="text-zinc-500 max-w-md mx-auto">
+                    Salut, {user?.userName}! Pentru a activa funcțiile de administrator, trebuie să sincronizezi echipa GHL folosind cheile API de mai jos.
+                </p>
+                <div className="text-left bg-zinc-50 dark:bg-black/50 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                    <FirstRunSetup />
+                </div>
+                <p className="text-xs text-zinc-400">
+                    După sincronizare, datele tale vor fi salvate și vei avea acces la dashboard-ul complet.
+                </p>
+            </div>
+        );
+    }
+
     if (loading && logs.length === 0) return (
         <div className="min-h-screen flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -199,10 +219,10 @@ export default function AdminDashboard() {
 
                     <a
                         href="/team"
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                        className="group flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/40 transform hover:-translate-y-0.5"
                     >
-                        <Calendar className="w-4 h-4 text-indigo-500" />
-                        Calendar
+                        <Users className="w-5 h-5" />
+                        <span className="text-sm font-bold">Vezi Echipa</span>
                     </a>
 
                     {isOwner && (

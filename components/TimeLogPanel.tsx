@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Clock, AlertCircle, Loader2, CheckCircle, MessageSquare } from 'lucide-react';
+import { Play, Square, Clock, AlertCircle, Loader2, CheckCircle, MessageSquare, ClipboardCheck } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TimeLog {
@@ -24,6 +24,7 @@ export default function TimeLogPanel({ userId, userName, email, onStatusChange }
     const [timer, setTimer] = useState<string>('00:00:00');
     const [description, setDescription] = useState('');
     const [showDescription, setShowDescription] = useState(false);
+    const [todaySchedule, setTodaySchedule] = useState<{ startTime: string, endTime: string, isOffDay: boolean } | null>(null);
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,8 +36,17 @@ export default function TimeLogPanel({ userId, userName, email, onStatusChange }
                 const active = data.logs.find((l: any) => l.isActive);
                 setActiveLog(active || null);
             }
+
+            // Also fetch today's schedule
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            const schedRes = await fetch(`/api/schedule?userId=${userId}&start=${todayStr}&end=${todayStr}`);
+            if (schedRes.ok) {
+                const scheds = await schedRes.json();
+                const todaySched = scheds.find((s: any) => s.dateString === todayStr);
+                setTodaySchedule(todaySched || null);
+            }
         } catch (e) {
-            console.error('Failed to fetch active session:', e);
+            console.error('Failed to fetch data:', e);
         } finally {
             setLoading(false);
         }
@@ -115,6 +125,48 @@ export default function TimeLogPanel({ userId, userName, email, onStatusChange }
         }
     };
 
+    const handleLogSchedule = async () => {
+        if (!todaySchedule || todaySchedule.isOffDay) return;
+        if (!confirm(`Vrei să înregistrezi orele din program (${todaySchedule.startTime} - ${todaySchedule.endTime}) ca fiind lucrate?`)) return;
+
+        setActionLoading(true);
+        try {
+            // Create a finalized log directly
+            const today = new Date();
+            const [startH, startM] = todaySchedule.startTime.split(':').map(Number);
+            const [endH, endM] = todaySchedule.endTime.split(':').map(Number);
+
+            const start = new Date(today);
+            start.setHours(startH, startM, 0, 0);
+
+            const end = new Date(today);
+            end.setHours(endH, endM, 0, 0);
+
+            const res = await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId,
+                    userName,
+                    email,
+                    checkIn: start.toISOString(),
+                    checkOut: end.toISOString(),
+                    description: 'Înregistrat automat din programul planificat',
+                    isActive: false
+                })
+            });
+
+            if (res.ok) {
+                alert('Programul a fost înregistrat cu succes!');
+                if (onStatusChange) onStatusChange();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     if (loading) return (
         <div className="h-24 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 animate-pulse">
             <Loader2 className="w-5 h-5 animate-spin text-zinc-300" />
@@ -123,8 +175,8 @@ export default function TimeLogPanel({ userId, userName, email, onStatusChange }
 
     return (
         <div className={`p-6 rounded-3xl shadow-sm border transition-all ${activeLog
-                ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/50'
-                : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
+            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/50'
+            : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800'
             }`}>
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
@@ -163,14 +215,28 @@ export default function TimeLogPanel({ userId, userName, email, onStatusChange }
                             </button>
                         </div>
                     ) : (
-                        <button
-                            onClick={handleStart}
-                            disabled={actionLoading}
-                            className="w-full md:w-64 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transform hover:-translate-y-1 active:scale-95 disabled:opacity-50"
-                        >
-                            {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
-                            Start Pontaj
-                        </button>
+                        <div className="flex flex-col sm:flex-row flex-1 gap-3">
+                            <button
+                                onClick={handleStart}
+                                disabled={actionLoading}
+                                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transform hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+                            >
+                                {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
+                                Start Pontaj
+                            </button>
+
+                            {todaySchedule && !todaySchedule.isOffDay && (
+                                <button
+                                    onClick={handleLogSchedule}
+                                    disabled={actionLoading}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 font-bold py-4 px-6 rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+                                    title={`Înregistrează rapid orele planificate: ${todaySchedule.startTime} - ${todaySchedule.endTime}`}
+                                >
+                                    <ClipboardCheck className="w-5 h-5" />
+                                    Încarcă din Program
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
